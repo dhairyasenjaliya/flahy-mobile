@@ -35,6 +35,12 @@
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string></string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Flahy needs access to your photo library to upload documents and images.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Flahy needs access to your camera to scan documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Flahy needs permission to save images to your gallery.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
