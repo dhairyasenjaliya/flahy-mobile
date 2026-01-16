@@ -1,134 +1,153 @@
-import { Camera, Sparkles } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+import { ArrowLeft, Calendar } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { CustomInput } from '../components/CustomInput';
 import { ScreenWrapper } from '../components/ScreenWrapper';
+import { TabSwitcher } from '../components/TabSwitcher';
+import { userService } from '../services/userService';
+import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 
-import { CommonActions, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 
 export const SettingsScreen = () => {
     const navigation = useNavigation();
-    const [activeTab, setActiveTab] = useState<'profile' | 'password'>('profile');
-
-    const handleLogout = () => {
-        navigation.dispatch(
-            CommonActions.reset({
-                index: 0,
-                routes: [{ name: 'Login' }],
-            })
-        );
-    };
+    const [activeTab, setActiveTab] = useState('Profile');
+    const { logout, user, setUser } = useAuthStore();
+    const [isLoading, setIsLoading] = useState(false);
 
     // Form State
-    const [firstName, setFirstName] = useState("Dhairya");
-    const [lastName, setLastName] = useState("Senjaliya");
-    const [phone, setPhone] = useState("8866663381");
-    const [email, setEmail] = useState("dhairya@flahy.com");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [dob, setDob] = useState("");
+    const [gender, setGender] = useState("");
 
-    const ProfileHeader = () => (
-        <View className="items-center mt-6 mb-8">
-            <View className="relative">
-                <View className="w-24 h-24 rounded-full bg-teal-light items-center justify-center border-4 border-white shadow-lg">
-                    <Text className="text-3xl font-bold text-white">DS</Text>
-                </View>
-                <TouchableOpacity className="absolute bottom-0 right-0 bg-primary p-2 rounded-full border border-white shadow-sm">
-                    <Camera size={14} color="white" />
-                </TouchableOpacity>
-            </View>
-            <Text className="text-2xl font-bold text-text-primary mt-3 tracking-tight">Dhairya Senjaliya</Text>
-            <View className="flex-row items-center gap-1 mt-1 bg-primary/10 px-3 py-1 rounded-full">
-                <Sparkles size={12} color={colors.primary} />
-                <Text className="text-primary text-xs font-semibold">Premium Member</Text>
-            </View>
-        </View>
-    );
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
 
-    const FormSection = ({ title, children }: { title?: string, children: React.ReactNode }) => (
-        <View className="mb-6">
-            {title && <Text className="text-text-secondary text-sm font-semibold ml-4 mb-2 uppercase tracking-wide">{title}</Text>}
-            <View className="bg-white rounded-3xl border-[0.5px] border-gray-100 overflow-hidden shadow-sm">
-                {children}
-            </View>
-        </View>
-    );
+    useEffect(() => {
+        fetchProfile();
+    }, []);
 
-    const FormRow = ({ label, value, onChangeText, placeholder, isLast, keyboardType = 'default' }: any) => (
-        <View className={`flex-row items-center px-5 py-4 ${!isLast ? 'border-b border-gray-50' : ''}`}>
-            <Text className="w-28 text-text-secondary font-medium text-base">{label}</Text>
-            <TextInput
-                value={value}
-                onChangeText={onChangeText}
-                placeholder={placeholder}
-                placeholderTextColor={colors['text-secondary']}
-                className="flex-1 text-text-primary text-base font-medium p-0"
-                keyboardType={keyboardType}
-            />
-        </View>
-    );
+    const fetchProfile = async () => {
+        setIsLoading(true);
+        try {
+            const data = await userService.getProfile();
+            // Assuming data.user matches the structure, or adjust as needed
+            // The curl output showed: {"user": {"id":..., "first_name": "Dhairya", ...}} inside response.data
+            // The userService returns response.data directly.
+            
+            const userData = data.user || data; 
+            if (userData) {
+                 setUser(userData); // Update store
+                 setFirstName(userData.first_name || "");
+                 setLastName(userData.last_name || "");
+                 setEmail(userData.email || "");
+                 setPhone(userData.contact || "");
+                 // Format DOB if needed
+                 setDob(userData.date_of_birth ? new Date(userData.date_of_birth).toDateString() : "");
+                 setGender(userData.gender || "");
+            }
+        } catch (error) {
+            console.error("Failed to fetch profile", error);
+            Alert.alert("Error", "Failed to load profile data");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        // Navigation reset is handled by RootNavigator now, but for safety:
+        // navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }));
+    };
 
     return (
-        <ScreenWrapper className="flex-1" edges={['top', 'left', 'right']}>
-            <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
-                <ScrollView contentContainerStyle={{ paddingBottom: 100 }}>
-                    
-                    <ProfileHeader />
+        <ScreenWrapper className="flex-1 bg-mint" edges={['top', 'left', 'right']}>
+            {/* Header */}
+            <View className="px-6 py-4 flex-row items-center mb-4">
+                <TouchableOpacity onPress={() => navigation.goBack()}>
+                    <ArrowLeft size={24} color="#000" />
+                </TouchableOpacity>
+                <Text className="flex-1 text-center text-lg font-bold text-text-primary mr-6">Account Settings</Text>
+            </View>
 
-                    <View className="px-6">
-                        {/* Segmented Control */}
-                        <View className="flex-row bg-gray-100 p-1 rounded-2xl mb-8">
-                            <TouchableOpacity 
-                                onPress={() => setActiveTab('profile')}
-                                className="flex-1 py-2.5 items-center rounded-xl"
-                                style={activeTab === 'profile' ? { backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                            >
-                                <Text className={`font-semibold ${activeTab === 'profile' ? 'text-text-primary' : 'text-text-secondary'}`}>Profile</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity 
-                                onPress={() => setActiveTab('password')}
-                                className="flex-1 py-2.5 items-center rounded-xl"
-                                style={activeTab === 'password' ? { backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                            >
-                                <Text className={`font-semibold ${activeTab === 'password' ? 'text-text-primary' : 'text-text-secondary'}`}>Password</Text>
-                            </TouchableOpacity>
-                        </View>
+            {/* Main Content Card (White with Top Radius) */}
+            <View className="flex-1 bg-white rounded-t-[40px] px-6 pt-8 shadow-sm">
+                <TabSwitcher 
+                    tabs={['Profile', 'Change Password']}
+                    activeTab={activeTab}
+                    onTabChange={setActiveTab}
+                />
 
-                        {activeTab === 'profile' ? (
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+                        
+                        {activeTab === 'Profile' ? (
                             <>
-                                <FormSection title="Personal Information">
-                                    <FormRow label="First Name" value={firstName} onChangeText={setFirstName} />
-                                    <FormRow label="Last Name" value={lastName} onChangeText={setLastName} isLast />
-                                </FormSection>
+                                <CustomInput label="First Name" value={firstName} onChangeText={setFirstName} />
+                                {/* Middle Name omitted if not in API usually, can ask user */}
+                                <CustomInput label="Last Name" value={lastName} onChangeText={setLastName} />
+                                <CustomInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
+                                
+                                <View className="mb-4">
+                                     <View className="flex-row justify-between mb-2">
+                                        <Text className="text-text-primary font-medium text-base">Phone No.</Text>
+                                     </View>
+                                     <View className="flex-row gap-3">
+                                         <View className="flex-1 bg-gray-100 border border-gray-200 rounded-xl h-14 justify-center px-4">
+                                             <Text className="text-text-primary text-base font-medium text-[#A0A0A0]">{phone}</Text>
+                                         </View>
+                                     </View>
+                                </View>
 
-                                <FormSection title="Contact">
-                                    <FormRow label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
-                                    <FormRow label="Phone" value={phone} onChangeText={setPhone} keyboardType="phone-pad" isLast />
-                                </FormSection>
+                                {/* Date of Birth */}
+                                <View className="mb-4">
+                                    <Text className="text-text-primary font-medium mb-2 text-base">Date of Birth</Text>
+                                    <View className="bg-white border border-gray-400 rounded-xl h-14 px-4 flex-row items-center justify-between">
+                                        <Text className="text-text-primary text-base font-medium">{dob || 'Not set'}</Text>
+                                        <Calendar size={20} color={colors['text-primary']} />
+                                    </View>
+                                </View>
+
+                                {/* Gender */}
+                                <View className="mb-4">
+                                    <Text className="text-text-primary font-medium mb-2 text-base">Gender</Text>
+                                    <View className="bg-white border border-gray-400 rounded-xl h-14 px-4 flex-row items-center justify-between">
+                                        <Text className="text-[#A0A0A0] text-base font-medium capitalize">{gender || 'Not Select'}</Text>
+                                        <Text className="text-[10px] text-text-secondary">▼</Text>
+                                    </View>
+                                </View>
                             </>
                         ) : (
-                             <FormSection title="Security">
-                                <FormRow label="Current" placeholder="••••••••" isLast={false} />
-                                <FormRow label="New" placeholder="••••••••" isLast={false} />
-                                <FormRow label="Confirm" placeholder="••••••••" isLast />
-                            </FormSection>
+                             <>
+                                <CustomInput label="New Password" placeholder="New Password" value={password} onChangeText={setPassword} secureTextEntry />
+                                <CustomInput label="Confirm Password" placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+                             </>
                         )}
 
+                        <TouchableOpacity 
+                            className="bg-teal h-14 rounded-xl items-center justify-center mt-6 shadow-sm mb-10"
+                            onPress={() => {
+                                Alert.alert("Info", "Update API not yet implemented");
+                            }}
+                        >
+                            <Text className="text-white font-semibold text-lg">Save</Text>
+                        </TouchableOpacity>
+                        
                         <TouchableOpacity 
                             onPress={handleLogout}
                             className="mt-4 bg-red-50 p-4 rounded-2xl items-center border border-red-100 mb-20"
                         >
                             <Text className="text-red-500 font-bold text-base">Log Out</Text>
                         </TouchableOpacity>
-                    </View>
-                </ScrollView>
-            </KeyboardAvoidingView>
 
-             {/* Floating Save Button */}
-            <View className="absolute bottom-10 left-6 right-6">
-                <TouchableOpacity className="bg-primary h-14 rounded-full items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform">
-                    <Text className="text-white font-bold text-lg">Save Changes</Text>
-                </TouchableOpacity>
+                    </ScrollView>
+                </KeyboardAvoidingView>
             </View>
-
         </ScreenWrapper>
     );
 };

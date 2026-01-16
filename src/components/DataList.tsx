@@ -10,6 +10,7 @@ interface DataListProps {
     data: any[];
     onDownload?: (item: any) => void;
     onDelete?: (item: any) => void;
+    emptyMessage?: string;
 }
 
 const { width } = Dimensions.get('window');
@@ -17,7 +18,7 @@ const GAP = 8;
 const PADDING = 24 * 2;
 const ITEM_WIDTH = (width - PADDING - (GAP * 2)) / 3;
 
-export const DataList = ({ data, onDownload, onDelete }: DataListProps) => {
+export const DataList = ({ data, onDownload, onDelete, emptyMessage }: DataListProps) => {
     const [viewMode, setViewMode] = useState<ViewMode>('list');
     const [filter, setFilter] = useState<FilterType>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -69,7 +70,7 @@ export const DataList = ({ data, onDownload, onDelete }: DataListProps) => {
                     <View className="flex-1 ml-3">
                         <Text className="text-text-primary font-medium text-sm" numberOfLines={1}>{item.name}</Text>
                         <Text className="text-text-secondary text-xs mt-0.5">
-                            {(item.size / 1024).toFixed(1)} KB • {new Date().toLocaleDateString()}
+                            {(item.size / 1024).toFixed(1)} KB • {item.date ? new Date(item.date).toLocaleDateString() : new Date().toLocaleDateString()}
                         </Text>
                     </View>
                     <TouchableOpacity onPress={() => handleOptions(item)} className="p-2">
@@ -188,7 +189,7 @@ export const DataList = ({ data, onDownload, onDelete }: DataListProps) => {
                     <View className="w-16 h-16 rounded-full bg-gray-50 items-center justify-center mb-4">
                         <FolderOpen size={30} color={colors['text-secondary']} />
                     </View>
-                    <Text className="text-text-primary font-semibold text-lg mb-2">No files found</Text>
+                    <Text className="text-text-primary font-semibold text-lg mb-2">{emptyMessage || "No files found"}</Text>
                     <Text className="text-text-secondary text-center leading-5 px-4 mb-6">
                         Try changing the filter or upload new files.
                     </Text>

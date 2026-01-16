@@ -1,20 +1,55 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Bot, Camera, FileText, Upload } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, PermissionsAndroid, Platform, ScrollView, Share, Text, TouchableOpacity, View } from 'react-native';
+import { Camera, CloudUpload, FileText, Search, Sparkles, Sprout } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { DataList } from '../components/DataList';
-import { Header } from '../components/Header';
 import { ScreenWrapper } from '../components/ScreenWrapper';
-import { SearchInput } from '../components/SearchInput';
 import { RootStackParamList } from '../navigation/types';
+import { userService } from '../services/userService';
+import { useAuthStore } from '../store/authStore';
+import { colors } from '../theme/colors';
+
+const USER_AVATAR = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2.25&w=256&h=256&q=80";
 
 export const DashboardScreen = () => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [searchText, setSearchText] = useState("");
   const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const user = useAuthStore((state) => state.user);
+
+  const fetchFiles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await userService.getFiles();
+      console.log("🚀 ~ fetchFiles ~ response:", response)
+      
+      // Ensure we target the array in 'data'
+      const list = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+      
+      const mappedFiles = list.map((file: any) => ({
+        id: file.id,
+        name: file.file_name || file.clientName || 'Unknown',
+        uri: file.report_url || file.filePath,
+        type: file.extname || (file.file_name ? file.file_name.split('.').pop() : 'unknown'),
+        size: file.size || 0,
+        date: file.created_at || file.createdAt
+      }));
+      setUploadedFiles(mappedFiles);
+    } catch (error) {
+       console.error("Failed to fetch files", error);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, []);
 
   const handleDownloadReport = () => {
     navigation.navigate('Reports');
@@ -25,7 +60,7 @@ export const DashboardScreen = () => {
   };
 
   const handleDeleteFile = (fileToDelete: any) => {
-      setUploadedFiles(prev => prev.filter(f => f.uri !== fileToDelete.uri));
+      Alert.alert("Info", "Delete functionality coming soon");
   };
 
   const handleDownloadFile = async (file: any) => {
@@ -39,7 +74,27 @@ export const DashboardScreen = () => {
       }
   };
 
-  // Direct File Manager Upload
+  const uploadFileToServer = async (file: any) => {
+      setIsUploading(true);
+      try {
+          const formData = new FormData();
+          formData.append('file', {
+              uri: file.uri,
+              type: file.type,
+              name: file.name,
+          });
+          
+          await userService.uploadFile(formData);
+          Alert.alert("Success", "File uploaded successfully");
+          fetchFiles(); 
+      } catch (error: any) {
+          Alert.alert("Error", "Failed to upload file");
+          console.error(error);
+      } finally {
+          setIsUploading(false);
+      }
+  };
+
   const handleUpload = () => {
       Alert.alert(
           "Upload",
@@ -56,16 +111,13 @@ export const DashboardScreen = () => {
     try {
       const results = await pick({
         type: [types.allFiles],
-        allowMultiSelection: true,
+        allowMultiSelection: false, 
       });
-      if (results) {
-        setUploadedFiles(prev => [...prev, ...results]);
+      if (results && results[0]) {
+        uploadFileToServer(results[0]);
       }
     } catch (err: any) {
-       if (err.code === 'DOCUMENT_PICKER_CANCELED') {
-           // ignore
-           return;
-       }
+       if (err.code === 'DOCUMENT_PICKER_CANCELED') return;
        console.error('Unknown Error: ', err);
     }
   };
@@ -73,17 +125,18 @@ export const DashboardScreen = () => {
   const pickImage = async () => {
       const result = await launchImageLibrary({
           mediaType: 'photo',
-          selectionLimit: 0, // 0 = unlimited
+          selectionLimit: 1, 
       });
 
-      if (result.assets) {
-          const formattedFiles = result.assets.map(asset => ({
+      if (result.assets && result.assets[0]) {
+          const asset = result.assets[0];
+          const file = {
               uri: asset.uri,
               name: asset.fileName,
               type: asset.type,
               size: asset.fileSize,
-          }));
-          setUploadedFiles(prev => [...prev, ...formattedFiles]);
+          };
+          uploadFileToServer(file);
       }
   };
 
@@ -115,96 +168,120 @@ export const DashboardScreen = () => {
         saveToPhotos: true,
     });
 
-    if (result.assets) {
-        const formattedFiles = result.assets.map(asset => ({
+    if (result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        const file = {
             uri: asset.uri,
             name: asset.fileName,
             type: asset.type,
             size: asset.fileSize,
-        }));
-        setUploadedFiles(prev => [...prev, ...formattedFiles]);
+        };
+        uploadFileToServer(file);
     }
   };
 
   return (
-    <ScreenWrapper className="flex-1" edges={['top', 'left', 'right']}>
-      {/* Scrollable Container */}
-      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }}>
+    <ScreenWrapper className="flex-1 bg-background" edges={['top']}>
+      <ScrollView 
+        className="flex-1" 
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchFiles} />}
+        showsVerticalScrollIndicator={false}
+      >
         
-        <Header />
-
-        {/* Greeting & Search (Aligned) */}
-        <View className="px-6 mt-4 mb-6 flex-row items-center justify-between gap-4">
+        {/* Header Section */}
+        <View className="px-6 pt-4 pb-2 flex-row justify-between items-start">
             <View>
-                <Text className="text-text-secondary font-medium text-sm">Good Morning,</Text>
-                <Text className="text-text-primary font-bold text-2xl font-modern">Dhairya</Text>
+                <View className="items-center flex-row mb-6">
+                    <Sprout size={28} color={colors.primary} />
+                    <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
+                </View>
+                <Text className="text-text-secondary font-medium text-base mb-1">Hi {user?.first_name || 'User'}</Text>
+                <Text className="text-text-primary font-bold text-2xl font-modern">Welcome to Dashboard</Text>
             </View>
-            <View className="flex-1 max-w-[200px]">
-                 <SearchInput 
-                    value={searchText} 
-                    onChangeText={setSearchText} 
-                    containerClassName="h-11 bg-white"
-                    placeholder="Search files..."
+            <View className="rounded-full overflow-hidden border-2 border-white shadow-sm">
+                <Image 
+                    source={{ uri: USER_AVATAR }} 
+                    className="w-12 h-12"
+                    resizeMode="cover"
+                />
+            </View>
+        </View>
+
+        {/* Search Bar */}
+        <View className="px-6 mt-6 mb-8">
+             <View className="bg-white border border-gray-300 rounded-2xl h-12 flex-row items-center px-4 shadow-sm">
+                 <Search size={20} color={colors['text-secondary']} />
+                 <TextInput 
+                    className="flex-1 ml-3 text-base text-text-primary h-full"
+                    placeholder="search..."
+                    placeholderTextColor={colors['text-secondary']}
+                    value={searchText}
+                    onChangeText={setSearchText}
                  />
-            </View>
+             </View>
         </View>
 
-        {/* Slick Action Row (Small Buttons) */}
-        <View className="px-6">
-            <View className="flex-row justify-between">
-               {/* FlahyAI */}
-               <TouchableOpacity 
+        {/* Action Hero Section */}
+        <View className="bg-mint rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
+        
+            {/* Download Report Button */}
+            <TouchableOpacity 
+                onPress={handleDownloadReport}
+                className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+            >
+                <FileText size={20} color="white" />
+                <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
+            </TouchableOpacity>
+
+            {/* Action Grid */}
+            <View className="flex-row justify-between gap-4 mb-8">
+                {/* FlahyAI */}
+                <TouchableOpacity 
                     onPress={handleFlahyAI}
-                    className="w-[23%] aspect-[0.9] bg-white rounded-2xl p-2 items-center justify-center shadow-sm border border-gray-100 gap-1.5"
-               >
-                   <View className="w-10 h-10 rounded-full bg-indigo-50 items-center justify-center">
-                       <Bot size={20} color="#6366f1" />
-                   </View>
-                   <Text className="text-text-primary font-bold text-xs text-center">AI Chat</Text>
-               </TouchableOpacity>
+                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                >
+                    <Sparkles size={28} color="white" />
+                    <Text className="text-white font-medium text-sm mt-2">FlahyAI</Text>
+                </TouchableOpacity>
 
-               {/* Upload */}
-               <TouchableOpacity 
+                {/* Upload */}
+                <TouchableOpacity 
                     onPress={handleUpload}
-                    className="w-[23%] aspect-[0.9] bg-white rounded-2xl p-2 items-center justify-center shadow-sm border border-gray-100 gap-1.5"
-               >
-                   <View className="w-10 h-10 rounded-full bg-blue-50 items-center justify-center">
-                       <Upload size={20} color="#3b82f6" />
-                   </View>
-                   <Text className="text-text-primary font-bold text-xs text-center">Upload</Text>
-               </TouchableOpacity>
+                    disabled={isUploading}
+                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                >
+                    {isUploading ? <ActivityIndicator color="white" /> : <CloudUpload size={28} color="white" />}
+                    <Text className="text-white font-medium text-sm mt-2">Upload</Text>
+                </TouchableOpacity>
 
-               {/* Reports */}
-               <TouchableOpacity 
-                    onPress={handleDownloadReport}
-                    className="w-[23%] aspect-[0.9] bg-white rounded-2xl p-2 items-center justify-center shadow-sm border border-gray-100 gap-1.5"
-               >
-                   <View className="w-10 h-10 rounded-full bg-orange-50 items-center justify-center">
-                       <FileText size={20} color="#f97316" />
-                   </View>
-                   <Text className="text-text-primary font-bold text-xs text-center">Reports</Text>
-               </TouchableOpacity>
-
-               {/* Camera */}
-               <TouchableOpacity 
+                {/* Camera */}
+                <TouchableOpacity 
                     onPress={handleCamera}
-                    className="w-[23%] aspect-[0.9] bg-white rounded-2xl p-2 items-center justify-center shadow-sm border border-gray-100 gap-1.5"
-               >
-                   <View className="w-10 h-10 rounded-full bg-emerald-50 items-center justify-center">
-                       <Camera size={20} color="#10b981" />
-                   </View>
-                   <Text className="text-text-primary font-bold text-xs text-center">Scan</Text>
-               </TouchableOpacity>
+                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                >
+                    <Camera size={28} color="white" />
+                    <Text className="text-white font-medium text-sm mt-2">Camera</Text>
+                </TouchableOpacity>
             </View>
-        </View>
 
-        {/* My Data Section */}
-        <View className="mt-8">
-            <DataList 
-                data={uploadedFiles} 
-                onDelete={handleDeleteFile}
-                onDownload={handleDownloadFile}
-            />
+            {/* My Data Section Header in White Card Area */}
+            <View className="bg-white rounded-[32px] p-6 min-h-[300px] shadow-sm">
+                <View className="flex-row justify-between items-center mb-6">
+                    <Text className="text-text-primary text-lg font-semibold">My Data</Text>
+                    <TouchableOpacity className="bg-teal px-3 py-1.5 rounded-lg flex-row items-center">
+                        <Text className="text-white text-xs font-medium">Select file type</Text>
+                    </TouchableOpacity>
+                </View>
+
+                 <DataList 
+                    data={uploadedFiles} 
+                    onDelete={handleDeleteFile}
+                    onDownload={handleDownloadFile}
+                    emptyMessage="No Data Found."
+                />
+            </View>
+
         </View>
 
       </ScrollView>
