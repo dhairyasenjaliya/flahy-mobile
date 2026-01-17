@@ -1,0 +1,1010 @@
+{
+  "info": {
+    "_postman_id": "155991f0-f0dd-478a-8ae5-6bd70f65239b",
+    "name": "FLAHYBASE",
+    "description": "# 🚀 Get started here\n\nThis template guides you through CRUD operations (GET, POST, PUT, DELETE), variables, and tests.\n\n## 🔖 **How to use this template**\n\n#### **Step 1: Send requests**\n\nRESTful APIs allow you to perform CRUD operations using the POST, GET, PUT, and DELETE HTTP methods.\n\nThis collection contains each of these [request](https://learning.postman.com/docs/sending-requests/requests/) types. Open each request and click \"Send\" to see what happens.\n\n#### **Step 2: View responses**\n\nObserve the response tab for status code (200 OK), response time, and size.\n\n#### **Step 3: Send new Body data**\n\nUpdate or add new data in \"Body\" in the POST request. Typically, Body data is also used in PUT request.\n\n```\n{\n    \"name\": \"Add your name in the body\"\n}\n\n ```\n\n#### **Step 4: Update the variable**\n\nVariables enable you to store and reuse values in Postman. We have created a [variable](https://learning.postman.com/docs/sending-requests/variables/) called `base_url` with the sample request [https://postman-api-learner.glitch.me](https://postman-api-learner.glitch.me). Replace it with your API endpoint to customize this collection.\n\n#### **Step 5: Add tests in the \"Scripts\" tab**\n\nAdding tests to your requests can help you confirm that your API is working as expected. You can write test scripts in JavaScript and view the output in the \"Test Results\" tab.\n\n<img src=\"https://content.pstmn.io/fa30ea0a-373d-4545-a668-e7b283cca343/aW1hZ2UucG5n\" width=\"2162\" height=\"1530\">\n\n## 💪 Pro tips\n\n- Use folders to group related requests and organize the collection.\n    \n- Add more [scripts](https://learning.postman.com/docs/writing-scripts/intro-to-scripts/) to verify if the API works as expected and execute workflows.\n    \n\n## 💡Related templates\n\n[API testing basics](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9a37a28-055b-49cd-8c7e-97494a21eb54&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[API documentation](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=e9c28f47-1253-44af-a2f3-20dce4da1f18&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)  \n[Authorization methods](https://go.postman.co/redirect/workspace?type=personal&collectionTemplateId=31a9a6ed-4cdf-4ced-984c-d12c9aec1c27&sourceTemplateId=ddb19591-3097-41cf-82af-c84273e56719)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "6800364",
+    "_collection_link": "https://go.postman.co/collection/6800364-155991f0-f0dd-478a-8ae5-6bd70f65239b?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "LOGINS",
+      "item": [
+        {
+          "name": "login check type user",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n    \"login_id\": \"4566544561\",\r\n    \"login_type\": 2,//1\r\n    \"country_code\":\"+1\"\r\n}\r\n\r\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/user/login/check-type",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "user",
+                "login",
+                "check-type"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "login admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"email\":\"admin@flahyrecovery.com\",\r\n    \"password\":\"@dmin123\"\r\n\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/admin/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "admin",
+                "login"
+              ]
+            },
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "login organisation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "email",
+                  "value": "testpartner@yopmail.com",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "54B8084",
+                  "type": "text"
+                },
+                {
+                  "key": "user_type",
+                  "value": "lab",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/lab/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "lab",
+                "login"
+              ]
+            },
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        },
+        {
+          "name": "login user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n\r\n    \"username\":\"7896547891\",\r\n    // // \"email\":\"harrynew222@yopmail.com\",\r\n    \"password\":\"Password123\",\r\n    \"password_type\":2\r\n    \r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/user/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "user",
+                "login"
+              ]
+            },
+            "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "CREATE ORDER",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Successful POST request\", function () {",
+              "    pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+              "});",
+              ""
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"product_name\": \"flahylife\",\n    \"first_name\": \"user rerer\",\n    \"last_name\": \"bye\",\n    \"gender\": \"female\",\n    \"date_of_birth\": \"2000-12-02\",\n    \"email\": \"testinglife@yopmail.com\",\n    \"contact\": \"9988552277\",\n\n    \"address_line_1\": \"jhgd hdih\",\n    \"address_line_2\": \"ihi\",\n    \"city\": \"chd\",\n    \"state\": \"chd\",\n    \"country\": \"India\",\n    \"pincode\": \"146369\",\n    \"country_code\":\"+1\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/create-order",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "create-order"
+          ]
+        },
+        "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+      },
+      "response": []
+    },
+    {
+      "name": "GET ALL ORDERS",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_Njk.bS1tSk93Zm13T1F5R3U2YXM4Ulg3c2k5U1RqaFVpcERjR1hUYzB3QzQ4NzQ4Nzk5Nw",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/admin/orders?page=1&limit=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "orders"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "1"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "CANCEL PAYMENT",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"razorpay_order_id\":\"order_RTKqxSxQXROFyQ\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/cancel-payment",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cancel-payment"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET ALL PRODUCTS",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/products",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "products"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "New Request",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/products",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "products"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "353"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Mon, 03 Nov 2025 09:11:39 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "[\n    {\n        \"id\": \"d122d9fc-8fdb-47c8-a7a9-79f792f432ad\",\n        \"name\": \"FlahyNeuro\",\n        \"slug\": \"flahyneuro\"\n    },\n    {\n        \"id\": \"79142e80-2f96-4c89-9357-76c14e838ade\",\n        \"name\": \"FlahyRecovery\",\n        \"slug\": \"flahyrecovery\"\n    },\n    {\n        \"id\": \"b73e427a-94fa-4cab-98e4-098c56387f29\",\n        \"name\": \"FlahyClarity\",\n        \"slug\": \"flahyclarity\"\n    },\n    {\n        \"id\": \"a7dbf342-9cf2-440a-b8bd-59dbaac425a2\",\n        \"name\": \"FlahyLife\",\n        \"slug\": \"flahylife\"\n    }\n]"
+        }
+      ]
+    },
+    {
+      "name": "GET PRODUCT BY SLUG",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/product/flahylife",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "product",
+            "flahylife"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "Get product by slug",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/product/flahylife",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "product",
+                "flahylife"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "232"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Mon, 03 Nov 2025 09:10:23 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"id\": \"a7dbf342-9cf2-440a-b8bd-59dbaac425a2\",\n    \"name\": \"FlahyLife\",\n    \"description\": \"Limitless Health, Personalized\",\n    \"slug\": \"flahylife\",\n    \"amount\": 1550000,\n    \"product_amount\": \"1313500\",\n    \"tax_percent\": \"18\",\n    \"tax_amount\": \"236500\",\n    \"currency\": \"INR\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "REQUEST CALLBACK",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\":\"newme shahh\",\r\n    \"country\":\"India\",\r\n    \"contact\":\"9874563214\",\r\n    \"preferred_time\":\"12:00\",\r\n    \"product_name\":\"Flahy Clarity\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/request-callback",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "request-callback"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "New Request",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\":\"helly poo\",\r\n    \"country\":\"India\",\r\n    \"contact\":\"6598745896\",\r\n    \"preferred_time\":\"18:00\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/request-callback",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "request-callback"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "57"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Mon, 22 Sep 2025 06:35:14 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"status\": 200,\n    \"message\": \"We will connect with you soon.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "REQUEST APPOINTMENT",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"name\": \"bot shah\",\r\n    \"email\": \"bot@yopmail.com\",\r\n    \"contact\": \"6598745896\",\r\n    \"pincode\": \"123654\",\r\n    \"message\": \"hellooooo\",\r\n    \"product_name\": \"Flahy Clarity\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/request-appointment",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "request-appointment"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "New Request",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"name\":\"helly poo\",\r\n    \"country\":\"India\",\r\n    \"contact\":\"6598745896\",\r\n    \"preferred_time\":\"18:00\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/request-callback",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "request-callback"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "57"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Mon, 22 Sep 2025 06:35:14 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"status\": 200,\n    \"message\": \"We will connect with you soon.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "SCHEDULE APPOINTMENT REQUEST",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_Ng.UFFSbEp4UC1PMkdlOHVBZ19yX2ljRk0wV09oNjB3YnRpV3E1c0kycjI1MzMyNDA3MDA",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"date\": \"2026-01-25\",\r\n    \"time\": \"10:00 AM - 12:00 PM\",\r\n    \"address\":\"new building\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/appointment-scheduling",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "appointment-scheduling"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "New Request",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"day\": \"Monday\",\r\n    \"time\": \"6pm\",\r\n    \"address\":\"new building phase 8 b\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/appointment-scheduling",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "appointment-scheduling"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "57"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Wed, 08 Oct 2025 12:44:42 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"status\": 200,\n    \"message\": \"We will connect with you soon.\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "UPLOAD MY FILE",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_Ng.UFFSbEp4UC1PMkdlOHVBZ19yX2ljRk0wV09oNjB3YnRpV3E1c0kycjI1MzMyNDA3MDA",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": "/C:/Users/kaush/Downloads/invoice_fc1234_(38).pdf"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/api/user/my-upload",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "my-upload"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "DOWNLOAD FILE",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "U2FsdGVkX19NCvnzYAgVMBAgUZF3/JioWOgbk1hUQev2e2htBPTSGxe8VhxdZlrwxeSbqLvebRr2D/j/LQ1+SF2MsFlMla3kgZ5YeAxc2bMXeSjQ5COpyosAjlx6o/cR",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/report/download-report/0a1a9b94-83bd-4c5f-917a-f25b5c86593e",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "report",
+            "download-report",
+            "0a1a9b94-83bd-4c5f-917a-f25b5c86593e"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "REGISTER USER",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"first_name\": \"Con\",\r\n  \"middle_name\": \"three\",\r\n  \"last_name\": \"shhh\",\r\n  \"email\": \"con3@yopmail.com\",\r\n  \"contact\": \"1231231233\",\r\n  \"user_type\": \"user\",\r\n  \"date_of_birth\": \"1984-02-23\",\r\n  \"gender\": \"other\",\r\n  \"consent\": true,\r\n  \"country_code\": \"+91\"\r\n}\r\n",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/user/register-user",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "user",
+            "register-user"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "GET REPOSTS LISTING",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_MjU.c2RwUTFhaTJhc213X1FOVXF0Zzg5VE9OZm9kOWRoMlVadHJVSFAyYjMwODg5ODI2MzI",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/lab/dashboard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "lab",
+            "dashboard"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "New Request",
+          "originalRequest": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/report/report-list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "report",
+                "report-list"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "895"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Tue, 11 Nov 2025 09:47:08 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"status\": 200,\n    \"message\": \"Report list retrieved successfully.\",\n    \"data\": [\n        {\n            \"id\": \"91823816-ddb3-4524-a0b8-9fa03277c179\",\n            \"file_name\": null,\n            \"order_id\": null,\n            \"specimen_id\": \"SI4135B4\",\n            \"contact\": \"2115145454\",\n            \"first_name\": \"fghfgh\",\n            \"middle_name\": \"fhfg\",\n            \"last_name\": \"fghfg\",\n            \"created_at\": \"2025-10-31T10:45:49.157+00:00\",\n            \"report_id\": \"FD2CA\"\n        },\n        {\n            \"id\": \"ca53f4c4-bce4-481d-8caf-45a84633127b\",\n            \"file_name\": null,\n            \"order_id\": null,\n            \"specimen_id\": \"SI683402\",\n            \"contact\": \"9887456965\",\n            \"first_name\": \"Raja\",\n            \"middle_name\": null,\n            \"last_name\": \"Kumar\",\n            \"created_at\": \"2025-10-23T07:15:27.105+00:00\",\n            \"report_id\": \"D7A1C\"\n        },\n        {\n            \"id\": \"0a1a9b94-83bd-4c5f-917a-f25b5c86593e\",\n            \"file_name\": \"mhn_2.pdf\",\n            \"order_id\": null,\n            \"specimen_id\": \"SIF992DF\",\n            \"contact\": \"8437333427\",\n            \"first_name\": \"karann\",\n            \"middle_name\": null,\n            \"last_name\": null,\n            \"created_at\": \"2025-10-23T06:16:45.710+00:00\",\n            \"report_id\": \"3FDA8\"\n        }\n    ],\n    \"meta\": {\n        \"currentPage\": 1,\n        \"lastPage\": 1,\n        \"total\": 3,\n        \"perPage\": 10\n    }\n}"
+        }
+      ]
+    },
+    {
+      "name": "CREATE USER FROM ORGANIZATION",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_Njc.alM3YnR6eGtNSnUyT2EzWE1Ea2l1dGN2T3FHZU9nWWJfa1Z6dUZaSDMxODc0OTAzNTk",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"first_name\": \"Tany\",\r\n    \"contact\": \"4566544560\",\r\n    \"date_of_birth\": \"2003-03-03\",\r\n    \"gender\": \"female\",\r\n    \"email\": \"tany@yopmail.com\",\r\n    \"product_name\": \"flahyln\",\r\n    \"country_code\":\"+1\"\r\n    // \"order_id\":\"FC36E1\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/lab/create-user-sample",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "lab",
+            "create-user-sample"
+          ]
+        }
+      },
+      "response": [
+        {
+          "name": "create user and report (org)",
+          "originalRequest": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"first_name\": \"kaushiki\",\r\n    \"contact\": \"4566544560\",\r\n    \"date_of_birth\": \"2003-03-03\",\r\n    \"gender\": \"female\",\r\n    \"email\": \"apple26@yopmail.com\",\r\n    \"product_name\": \"flahyln\",\r\n    \"country_code\":\"+1\"\r\n    // \"order_id\":\"FC36E1\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/lab/create-user-sample",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "lab",
+                "create-user-sample"
+              ]
+            }
+          },
+          "status": "OK",
+          "code": 200,
+          "_postman_previewlanguage": "Text",
+          "header": [
+            {
+              "key": "content-length",
+              "value": "121"
+            },
+            {
+              "key": "content-type",
+              "value": "application/json; charset=utf-8"
+            },
+            {
+              "key": "Date",
+              "value": "Thu, 04 Dec 2025 11:15:36 GMT"
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive"
+            },
+            {
+              "key": "Keep-Alive",
+              "value": "timeout=5"
+            }
+          ],
+          "cookie": [],
+          "body": "{\n    \"specimen_id\": \"SIEE3987\",\n    \"report_id\": \"DC2C1\",\n    \"flahybase_id\": \"FYEDBCEE\",\n    \"user_id\": \"b8657dcb-6209-45c8-8a84-10ae55567df5\"\n}"
+        }
+      ]
+    },
+    {
+      "name": "ADMIN DASHBOATF",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "oat_MzQ.ZUo1bF80MzllWTlFaDZwTnBiQ3pHSkZkLTVucUtIQlVkaWUxUm1MbjMwNjk1ODIxNTc",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/admin/dashboard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "admin",
+            "dashboard"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "basic"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "id",
+      "value": "1"
+    },
+    {
+      "key": "base_url",
+      "value": "https://template.postman-echo.com"
+    }
+  ]
+}

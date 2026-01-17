@@ -1,6 +1,7 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { DashboardScreen } from '../screens/DashboardScreen';
+import { FileViewerScreen } from '../screens/FileViewerScreen';
 import { FlahyAIScreen } from '../screens/FlahyAIScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
@@ -34,6 +35,11 @@ export const RootNavigator = () => {
                 name="Reports" 
                 component={ReportsScreen} 
                 options={{ presentation: 'modal' }} 
+            />
+            <Stack.Screen 
+                name="FileViewer" 
+                component={FileViewerScreen} 
+                options={{ animation: 'fade' }}
             />
         </>
       ) : (

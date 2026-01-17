@@ -60,7 +60,33 @@ export const DashboardScreen = () => {
     };
 
     const handleDeleteFile = (fileToDelete: any) => {
-        Alert.alert("Info", "Delete functionality coming soon");
+        Alert.alert(
+            "Delete File",
+            `Are you sure you want to delete ${fileToDelete.name}?`,
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: "Delete", 
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setIsLoading(true);
+                            await userService.deleteFile(fileToDelete.id);
+                            // Optimistic update or refresh
+                            const updatedList = uploadedFiles.filter(f => f.id !== fileToDelete.id);
+                            setUploadedFiles(updatedList);
+                            Alert.alert("Success", "File deleted successfully");
+                            // fetchFiles(); // Optional: double check with server
+                        } catch (error) {
+                            console.error("Delete failed", error);
+                            Alert.alert("Error", "Failed to delete file. Please try again.");
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     const handleDownloadFile = async (file: any) => {
@@ -215,25 +241,30 @@ export const DashboardScreen = () => {
             >
 
                 {/* Header Section */}
-                <View className="px-6 pt-4 pb-2 flex-row justify-between items-start">
-                    <View>
-                        <View className="items-center flex-row mb-6">
-                            <Sprout size={28} color={colors.primary} />
-                            <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
-                        </View>
-                        <Text className="text-text-secondary font-medium text-base mb-1">Hi {user?.first_name || 'User'}</Text>
-                        <Text className="text-text-primary font-bold text-2xl font-modern">Welcome to Dashboard</Text>
+                <View className="px-6 pt-4 pb-2">
+                    {/* Top Centered Logo */}
+                    <View className="items-center flex-row justify-center mb-6">
+                        <Sprout size={28} color={colors.primary} />
+                        <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Settings')}
-                        className="rounded-full overflow-hidden border-2 border-white shadow-sm"
-                    >
-                        <Image
-                            source={{ uri: USER_AVATAR }}
-                            className="w-12 h-12"
-                            resizeMode="cover"
-                        />
-                    </TouchableOpacity>
+                    
+                    {/* User Greeting and Avatar Row */}
+                    <View className="flex-row justify-between items-center">
+                        <View>
+                             <Text className="text-text-primary font-bold text-lg">Hi {user?.first_name || 'User'}</Text>
+                             <Text className="text-text-primary font-bold text-xl font-modern">Welcome to Dashboard</Text>
+                        </View>
+                        <TouchableOpacity 
+                            onPress={() => navigation.navigate('Settings')}
+                            className="rounded-full overflow-hidden"
+                        >
+                            <Image 
+                                source={{ uri: USER_AVATAR }} 
+                                className="w-12 h-12 rounded-full"
+                                resizeMode="cover"
+                            />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Search Bar */}
@@ -251,7 +282,8 @@ export const DashboardScreen = () => {
                 </View>
 
                 {/* Action Hero Section */}
-                <View className="bg-mint rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
+                {/* Action Hero Section */}
+                <View className="bg-[#E2F1E6] rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
 
                     {/* Download Report Button */}
                     <TouchableOpacity
@@ -294,11 +326,15 @@ export const DashboardScreen = () => {
                     </View>
 
                     {/* My Data Section Header in White Card Area */}
-                    <View className="bg-white rounded-[32px] pt-6 min-h-[300px] shadow-sm">
+                    <View className="bg-white rounded-t-[40px] pt-8 min-h-[400px] shadow-sm -mx-6">
                         <DataList
                             data={uploadedFiles}
                             onDelete={handleDeleteFile}
                             onDownload={handleDownloadFile}
+                            onPress={(file) => {
+                                console.log('File clicked:', file.name);
+                                navigation.navigate('FileViewer', { file });
+                            }}
                             emptyMessage="No Data Found."
                         />
                     </View>

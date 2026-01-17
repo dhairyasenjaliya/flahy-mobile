@@ -143,25 +143,58 @@ export const SettingsScreen = () => {
 
                         <TouchableOpacity 
                             style={{
-                                backgroundColor: colors.primary, // Using primary color for consistency or stick to 'teal' hex if desired
+                                backgroundColor: colors.primary,
                                 height: 56,
                                 borderRadius: 12,
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 marginTop: 24,
                                 marginBottom: 40,
+                                opacity: isLoading ? 0.7 : 1,
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
                                 shadowOpacity: 0.1,
                                 shadowRadius: 2,
                                 elevation: 2
                             }}
-                            onPress={() => {
-                                Alert.alert("Info", "Update API not yet implemented");
+                            onPress={async () => {
+                                if (isLoading) return;
+                                setIsLoading(true);
+                                try {
+                                    if (activeTab === 'Profile') {
+                                        await userService.updateProfile({
+                                            first_name: firstName,
+                                            last_name: lastName,
+                                            email: email,
+                                            // omitting sensitive fields if not editable or handle separately
+                                        });
+                                        Alert.alert("Success", "Profile updated successfully");
+                                        await fetchProfile(); // Refresh
+                                    } else {
+                                        if (!password || !confirmPassword) {
+                                            Alert.alert("Error", "Please fill all fields");
+                                            return;
+                                        }
+                                        if (password !== confirmPassword) {
+                                            Alert.alert("Error", "Passwords do not match");
+                                            return;
+                                        }
+                                        await userService.createPassword(password);
+                                        Alert.alert("Success", "Password updated successfully");
+                                        setPassword("");
+                                        setConfirmPassword("");
+                                    }
+                                } catch (error: any) {
+                                    console.error("Update failed", error);
+                                    Alert.alert("Error", error.response?.data?.message || "Failed to update settings");
+                                } finally {
+                                    setIsLoading(false);
+                                }
                             }}
+                            disabled={isLoading}
                         >
                             <Text style={{ color: 'white', fontWeight: '600', fontSize: 18 }}>
-                                {activeTab === 'Change Password' ? 'Update Password' : 'Save Changes'}
+                                {isLoading ? "Saving..." : (activeTab === 'Change Password' ? 'Update Password' : 'Save Changes')}
                             </Text>
                         </TouchableOpacity>
                         

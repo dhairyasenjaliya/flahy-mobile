@@ -6,16 +6,18 @@ module.exports = {
   theme: {
     extend: {
         colors: {
-            primary: "#2E5C55", // Deep Teal/Green - more premium than the previous muted green
-            secondary: "#C46D5E", // Terracotta - warm secondary
-            background: "#F8F9FA", // Slate 50 - clean modern background
+            primary: "#70A263",
+            secondary: "#BB8785",
+            background: "#FFFBE6", // Cream Updated
             card: "#FFFFFF",
-            input: "#F1F5F9", // Slate 100
+            input: "#FFFFFF",
             teal: "#2CAEA6",
-            "teal-light": "#E0F2F1",
-            "green-light": "#E6F4EA",
-            "text-primary": "#0F172A", // Slate 900 - sharp text
-            "text-secondary": "#64748B", // Slate 500
+            "teal-light": "#75BAD8",
+            "green-light": "#D8E8D4",
+            mint: "#E6F4F1",
+            "text-primary": "#1B2C3F",
+            "text-secondary": "#6C7074",
+            border: "#E2E8F0"
         },
         fontFamily: {
             system: ['System', 'sans-serif'],

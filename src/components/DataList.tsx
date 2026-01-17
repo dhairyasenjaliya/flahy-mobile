@@ -1,25 +1,26 @@
-import { ChevronDown, FileText, FolderOpen, LayoutGrid, List as ListIcon, MoreVertical } from 'lucide-react-native';
+import { ArrowUp, FileText, LayoutGrid, MoreHorizontal, MoreVertical, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
 
 type ViewMode = 'list' | 'grid';
-type FilterType = 'all' | 'pdf' | 'png' | 'jpeg' | 'jpg' | 'dcm';
+type FilterType = 'all' | 'pdf' | 'png' | 'jpeg' | 'jpg' | 'dcm' | 'image';
 
 interface DataListProps {
     data: any[];
     onDownload?: (item: any) => void;
     onDelete?: (item: any) => void;
+    onPress?: (item: any) => void;
     emptyMessage?: string;
 }
 
 const { width } = Dimensions.get('window');
-const GAP = 8;
+const GAP = 16;
 const PADDING = 24 * 2;
-const ITEM_WIDTH = (width - PADDING - (GAP * 2)) / 3;
+const ITEM_WIDTH = (width - PADDING - GAP) / 2;
 
-export const DataList = ({ data, onDownload, onDelete, emptyMessage }: DataListProps) => {
-    const [viewMode, setViewMode] = useState<ViewMode>('list');
+export const DataList = ({ data, onDownload, onDelete, onPress, emptyMessage }: DataListProps) => {
+    const [viewMode, setViewMode] = useState<ViewMode>('grid'); // Defaulting to grid as per Screenshot 2/4 prevalence? Screenshot 4 is Grid.
     const [filter, setFilter] = useState<FilterType>('all');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
 
@@ -33,23 +34,6 @@ export const DataList = ({ data, onDownload, onDelete, emptyMessage }: DataListP
         return true;
     });
 
-    const renderIcon = (item: any) => {
-        if (item.type?.includes('image')) {
-            return (
-                <Image
-                    source={{ uri: item.uri }}
-                    className="w-10 h-10 rounded-lg bg-teal-light/20"
-                    resizeMode="cover"
-                />
-            );
-        }
-        return (
-            <View className="w-10 h-10 rounded-lg bg-orange-50 items-center justify-center">
-                <FileText size={20} color="#f97316" />
-            </View>
-        );
-    };
-
     const handleOptions = (item: any) => {
         Alert.alert(
             item.name,
@@ -62,61 +46,117 @@ export const DataList = ({ data, onDownload, onDelete, emptyMessage }: DataListP
         );
     };
 
-    const renderItem = ({ item }: { item: any }) => {
-        if (viewMode === 'list') {
-            return (
-                <View className="flex-row items-center p-3 border-b border-gray-50 last:border-0">
-                    {renderIcon(item)}
-                    <View className="flex-1 ml-3">
-                        <Text className="text-text-primary font-medium text-sm" numberOfLines={1}>{item.name}</Text>
-                        <Text className="text-text-secondary text-xs mt-0.5">
-                            {(item.size / 1024).toFixed(1)} KB • {item.date ? new Date(item.date).toLocaleDateString() : new Date().toLocaleDateString()}
-                        </Text>
-                    </View>
-                    <TouchableOpacity onPress={() => handleOptions(item)} className="p-2">
-                        <MoreVertical size={16} color={colors['text-secondary']} />
-                    </TouchableOpacity>
-                </View>
-            );
-        }
+    const renderGridItem = ({ item }: { item: any }) => (
+        <TouchableOpacity 
+            style={{ width: ITEM_WIDTH }} 
+            className="mb-4"
+            onPress={() => onPress?.(item)}
+            activeOpacity={0.7}
+        >
+             {/* Card Image/Preview */}
+             <View className="w-full aspect-square bg-[#E5E7EB] rounded-xl mb-2 relative overflow-hidden items-center justify-center border border-gray-200">
+                 {(item.type?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(item.type?.toLowerCase())) ? (
+                      <Image 
+                        source={{ uri: item.uri }}
+                        className="w-full h-full"
+                        resizeMode="cover"
+                      />
+                 ) : item.type?.includes('pdf') ? (
+                     // PDF Stylized Thumbnail
+                     <View className="w-16 h-20 bg-white shadow-sm items-center justify-center relative rounded-sm">
+                         <View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-bl-lg z-10" />
+                         <View className="absolute top-0 left-0 right-0 h-4 bg-red-50 rounded-t-sm items-center justify-center">
+                              <Text className="text-[6px] font-bold text-red-500">PDF</Text>
+                         </View>
+                         <FileText size={24} color="#EF4444" className="mt-2" />
+                         <View className="absolute bottom-2 w-10 h-0.5 bg-gray-100 rounded-full" />
+                         <View className="absolute bottom-3 w-8 h-0.5 bg-gray-100 rounded-full" />
+                     </View>
+                 ) : (
+                      // Generic File
+                      <FileText size={32} color="#9CA3AF" />
+                 )}
+                 {/* Star Icon Bottom Right */}
+                 <View className="absolute bottom-2 right-2 p-1.5 bg-black/40 rounded-full">
+                     <Star size={10} color="white" fill="white" />
+                 </View>
+             </View>
+             
+             {/* Meta */}
+             <View className="flex-row items-center justify-between">
+                 <View className="flex-row items-center flex-1 mr-2">
+                     {/* Small Icon based on type */}
+                     {item.type?.includes('pdf') ? (
+                         <View className="w-4 h-4 bg-red-100 rounded items-center justify-center mr-1.5">
+                             <Text className="text-[8px] font-bold text-red-500">PDF</Text>
+                         </View>
+                     ) : (
+                         <View className="w-4 h-4 bg-orange-100 rounded items-center justify-center mr-1.5">
+                             {/* <Image source={require('../assets/image_icon_placeholder.png')} className="w-3 h-3" />  */}
+                             {/* Fallback if no asset */}
+                             <View className="w-2 h-2 bg-orange-400 rounded-sm" />
+                         </View>
+                     )}
+                     <Text className="text-text-primary text-sm font-medium" numberOfLines={1}>{item.name}</Text>
+                 </View>
+                 <TouchableOpacity onPress={() => handleOptions(item)}>
+                      <MoreHorizontal size={18} color="#9CA3AF" />
+                 </TouchableOpacity>
+             </View>
+             {/* Date/Size - Screenshot shows "Modified 29 sep 2022" with star? */}
+             {/* Actually Screenshot 4 shows: 
+                 [Icon] [Name] ...
+                 [Star] Modified 29 sep 2022
+             */}
+             <View className="flex-row items-center mt-0.5">
+                 <Star size={10} color="#9CA3AF" fill="#9CA3AF" className="mr-1" />
+                 <Text className="text-[#9CA3AF] text-xs ml-1">Modified {item.date ? new Date(item.date).toLocaleDateString() : '29 sep 2022'}</Text>
+             </View>
+        </TouchableOpacity>
+    );
 
-        // Grid View
-        return (
-            <View
-                style={{ width: ITEM_WIDTH }}
-                className="aspect-[0.8] mb-1"
-            >
-                <View className="flex-1 bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden relative justify-between">
-                    {/* 3-Dot Menu */}
-                    <TouchableOpacity
-                        onPress={() => handleOptions(item)}
-                        className="absolute top-1 right-1 z-10 p-1 bg-white/60 rounded-full"
-                    >
-                        <MoreVertical size={14} color={colors['text-secondary']} />
-                    </TouchableOpacity>
+    const renderListItem = ({ item }: { item: any }) => (
+         <TouchableOpacity 
+            className="flex-row items-center py-4 border-b border-gray-100"
+            onPress={() => onPress?.(item)}
+            activeOpacity={0.7}
+         >
+             {/* Icon */}
+             <View className="mr-4">
+                 {item.type?.includes('pdf') ? (
+                     <View className="w-10 h-10 bg-red-50 rounded-lg items-center justify-center">
+                         <Text className="text-red-500 text-[10px] font-bold">PDF</Text>
+                     </View>
+                 ) : (item.type?.includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(item.type?.toLowerCase())) ? (
+                      <View className="w-10 h-10 bg-gray-200 rounded-lg overflow-hidden border border-gray-200">
+                          <Image 
+                              source={{ uri: item.uri }}
+                              className="w-full h-full"
+                              resizeMode="cover"
+                          />
+                      </View>
+                 ) : (
+                     <View className="w-10 h-10 bg-orange-50 rounded-lg items-center justify-center">
+                          {/* Generic Icon placeholder */}
+                          <View className="w-5 h-5 bg-orange-200 rounded-sm" />
+                     </View>
+                 )}
+             </View>
+             
+             {/* Content */}
+             <View className="flex-1">
+                 <Text className="text-text-primary font-medium text-base mb-1">{item.name}</Text>
+                 <View className="flex-row items-center">
+                     <Star size={12} color="#9CA3AF" fill="#9CA3AF" />
+                     <Text className="text-[#9CA3AF] text-sm ml-1.5">Modified {item.date ? new Date(item.date).toLocaleDateString() : '29 sep 2022'}</Text>
+                 </View>
+             </View>
 
-                    {/* Preview Section */}
-                    <View className="flex-1 bg-gray-50 items-center justify-center overflow-hidden">
-                        {item.type?.includes('image') ? (
-                            <Image
-                                source={{ uri: item.uri }}
-                                className="w-full h-full"
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <FileText size={28} color="#f97316" />
-                        )}
-                    </View>
-
-                    {/* Info Section */}
-                    <View className="px-2 py-2 bg-white w-full border-t border-gray-50">
-                        <Text className="text-text-primary font-medium text-[10px] text-center" numberOfLines={1}>{item.name}</Text>
-                        <Text className="text-text-secondary text-[9px] text-center mt-0.5">{(item.size / 1024).toFixed(0)} KB</Text>
-                    </View>
-                </View>
-            </View>
-        );
-    };
+             <TouchableOpacity onPress={() => handleOptions(item)} className="p-2">
+                 <MoreHorizontal size={20} color="#CBD5E1" />
+             </TouchableOpacity>
+         </TouchableOpacity>
+    );
 
     const FilterOption = ({ type, label }: { type: FilterType, label: string }) => (
         <TouchableOpacity
@@ -124,91 +164,81 @@ export const DataList = ({ data, onDownload, onDelete, emptyMessage }: DataListP
                 setFilter(type);
                 setIsFilterOpen(false);
             }}
-            className={`px-4 py-2 border-b border-gray-50 last:border-0 ${filter === type ? 'bg-primary/5' : ''}`}
+            className={`px-4 py-3 border-b border-gray-50 last:border-0 ${filter === type ? 'bg-teal-50' : ''}`}
         >
-            <Text className={`${filter === type ? 'text-primary font-bold' : 'text-text-primary'} text-sm`}>{label}</Text>
+            <Text className={`${filter === type ? 'text-teal font-bold' : 'text-text-primary'} text-sm`}>{label}</Text>
         </TouchableOpacity>
     );
 
     return (
-        <View className="px-6 mb-10 z-50">
-            {/* Header: Title and Controls */}
-            <View className="flex-row justify-between items-center mb-5 z-50">
-                <Text className="text-xl font-bold text-text-primary tracking-tight">My Data</Text>
+        <View className="px-6 mb-10">
+            {/* Header: Title and Select File Type Button */}
+            <View className="flex-row justify-between items-center mb-6 z-50">
+                <View className="flex-row items-center">
+                     <Text className="text-[17px] font-medium text-text-primary mr-1">My Data</Text>
+                     {/* Show arrow only if sortable/expandable? Screenshot 4 has arrow up */}
+                     <ArrowUp size={16} color={colors['text-primary']} />
+                </View>
 
-                <View className="flex-row gap-3 z-50">
-                    {/* Filter Dropdown */}
-                    <View className="relative z-50">
+                {/* Right Side: Toggle or Filter Pill */}
+                <View className="flex-row items-center gap-3">
+                     {/* If Grid Mode -> Show "Select file type" Pill? 
+                         Screenshot 2 (Grid view context) shows "Select file type" pill. 
+                         Screenshot 5 (List view context) shows Grid Icon.
+                     */}
+                     
+                     <View className="relative z-50">
                         <TouchableOpacity
                             onPress={() => setIsFilterOpen(!isFilterOpen)}
-                            className="flex-row bg-white border border-gray-200 rounded-2xl px-3 h-12 items-center justify-between gap-1.5 w-40"
-                            activeOpacity={0.7}
+                            className="bg-teal px-4 py-2 rounded-lg flex-row items-center"
+                            activeOpacity={0.8}
                         >
-                            <Text className="text-text-primary text-xs font-semibold capitalize" numberOfLines={1}>
-                                {filter}
-                            </Text>
-                            <ChevronDown size={14} color={colors['text-secondary']} />
+                            {/* <Filter size={14} color="white" className="mr-2" /> */}
+                            {/* Icon looks like sliders? Or just text? Screenshot 2 has Icon + Text */}
+                            <MoreVertical size={14} color="white" style={{ transform: [{ rotate: '90deg' }] }} /> 
+                            <Text className="text-white text-xs font-medium ml-2">Select file type</Text>
                         </TouchableOpacity>
 
-                        {/* Dropdown Menu */}
-                        {isFilterOpen && (
-                            <View className="absolute top-14 right-0 w-40 bg-white rounded-2xl border border-gray-100 shadow-lg z-50 overflow-hidden">
+                         {isFilterOpen && (
+                            <View className="absolute top-12 right-0 w-48 bg-white rounded-2xl border border-gray-100 shadow-xl z-50 overflow-hidden">
                                 <FilterOption type="all" label="All Files" />
-                                <FilterOption type="pdf" label="pdf" />
-                                <FilterOption type="png" label="png" />
-                                <FilterOption type="jpeg" label="jpeg" />
-                                <FilterOption type="jpg" label="jpg" />
-                                <FilterOption type="dcm" label="dcm" />
+                                <FilterOption type="pdf" label="PDF Documents" />
+                                <FilterOption type="image" label="Images" />
                             </View>
                         )}
-                    </View>
+                     </View>
 
-                    {/* View Toggle */}
-                    <View className="flex-row bg-gray-100 rounded-2xl p-1 items-center">
-                        <TouchableOpacity
-                            onPress={() => setViewMode('list')}
-                            className="p-2 rounded-xl w-10 h-10 items-center justify-center"
-                            style={viewMode === 'list' ? { backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                        >
-                            <ListIcon size={18} color={viewMode === 'list' ? colors.primary : colors['text-secondary']} />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => setViewMode('grid')}
-                            className="p-2 rounded-xl w-10 h-10 items-center justify-center"
-                            style={viewMode === 'grid' ? { backgroundColor: 'white', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 } : {}}
-                        >
-                            <LayoutGrid size={22} color={viewMode === 'grid' ? colors.primary : colors['text-secondary']} />
-                        </TouchableOpacity>
-                    </View>
+                     {/* View Switcher (Optional, screenshot 5 suggests specific icon) */}
+                     {/* <TouchableOpacity onPress={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}>
+                         {viewMode === 'list' ? <LayoutGrid size={20} color={colors.textSecondary} /> : <ListIcon size={20} color={colors.textSecondary} />}
+                     </TouchableOpacity> */}
+                     <TouchableOpacity onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}>
+                          <LayoutGrid size={20} color={colors['text-secondary']} />
+                     </TouchableOpacity>
+
                 </View>
             </View>
 
             {/* Content Area */}
             {filteredData.length === 0 ? (
-                <View className="bg-white rounded-3xl p-10 items-center justify-center shadow-sm border-[0.5px] border-gray-100 h-[250px] -z-10">
-                    <View className="w-16 h-16 rounded-full bg-gray-50 items-center justify-center mb-4">
-                        <FolderOpen size={30} color={colors['text-secondary']} />
-                    </View>
-                    <Text className="text-text-primary font-semibold text-lg mb-2">{emptyMessage || "No files found"}</Text>
-                    <Text className="text-text-secondary text-center leading-5 px-4 mb-6">
-                        Try changing the filter or upload new files.
-                    </Text>
+                <View className="items-center justify-center h-[200px]">
+                     <Text className="text-text-secondary text-base">No Data Found.</Text>
                 </View>
             ) : (
-                <View className={`${viewMode === 'list' ? "bg-white rounded-3xl shadow-sm border-[0.5px] border-gray-100 overflow-hidden" : ""} -z-10`}>
+                <View>
                     {viewMode === 'list' ? (
                         <FlatList
                             data={filteredData}
-                            renderItem={renderItem}
+                            renderItem={renderListItem}
                             keyExtractor={(item: any, index) => index.toString()}
-                            contentContainerStyle={{ padding: 0 }}
+                            contentContainerStyle={{ paddingBottom: 20 }}
                             scrollEnabled={false}
                         />
                     ) : (
-                        <View className="flex-row flex-wrap gap-2">
+                        <View className="flex-row flex-wrap justify-between">
                             {filteredData.map((item, index) => (
                                 <View key={index}>
-                                    {renderItem({ item })}
+                                    {renderGridItem({ item })}
                                 </View>
                             ))}
                         </View>

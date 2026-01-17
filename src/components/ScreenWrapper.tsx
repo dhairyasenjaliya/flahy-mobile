@@ -17,7 +17,7 @@ export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({
 }) => {
   return (
     <SafeAreaView 
-      style={[{ flex: 1, backgroundColor: '#FAFAFA' }, style]} 
+      style={[{ flex: 1 }, style]} 
       className={className} 
       edges={edges}
     >

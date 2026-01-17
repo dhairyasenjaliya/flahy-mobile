@@ -5,7 +5,8 @@ export type RootStackParamList = {
   Settings: undefined;
   Upload: undefined;
   Camera: undefined;
-  ReportViewer: { reportId: string };
   Reports: undefined;
+  ReportViewer: { reportId: string };
+  FileViewer: { file: any };
   FlahyAI: undefined;
 };

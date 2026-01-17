@@ -1,7 +1,7 @@
 export const colors = {
   primary: "#70A263",
   secondary: "#BB8785",
-  background: "#FFFFF0", // Cream
+  background: "#FFFBE6", // Cream Updated
   card: "#FFFFFF",
   input: "#FFFFFF",
   teal: "#2CAEA6",
