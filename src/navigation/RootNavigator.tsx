@@ -1,11 +1,12 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { DashboardScreen } from '../screens/DashboardScreen';
 import { FlahyAIScreen } from '../screens/FlahyAIScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 import { UploadScreen } from '../screens/UploadScreen';
 import { useAuthStore } from '../store/authStore';
-import { TabNavigator } from './TabNavigator';
 import { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -17,7 +18,8 @@ export const RootNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
         <>
-            <Stack.Screen name="Main" component={TabNavigator} />
+            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
             <Stack.Screen 
                 name="Upload" 
                 component={UploadScreen} 

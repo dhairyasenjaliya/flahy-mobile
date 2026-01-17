@@ -15,276 +15,297 @@ import { colors } from '../theme/colors';
 const USER_AVATAR = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2.25&w=256&h=256&q=80";
 
 export const DashboardScreen = () => {
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const [searchText, setSearchText] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const user = useAuthStore((state) => state.user);
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+    const [searchText, setSearchText] = useState("");
+    const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const user = useAuthStore((state) => state.user);
 
-  const fetchFiles = async () => {
-    setIsLoading(true);
-    try {
-      const response = await userService.getFiles();
-      console.log("🚀 ~ fetchFiles ~ response:", response)
-      
-      // Ensure we target the array in 'data'
-      const list = Array.isArray(response.data) ? response.data : (response.data?.data || []);
-      
-      const mappedFiles = list.map((file: any) => ({
-        id: file.id,
-        name: file.file_name || file.clientName || 'Unknown',
-        uri: file.report_url || file.filePath,
-        type: file.extname || (file.file_name ? file.file_name.split('.').pop() : 'unknown'),
-        size: file.size || 0,
-        date: file.created_at || file.createdAt
-      }));
-      setUploadedFiles(mappedFiles);
-    } catch (error) {
-       console.error("Failed to fetch files", error);
-    } finally {
-        setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
-  const handleDownloadReport = () => {
-    navigation.navigate('Reports');
-  };
-
-  const handleFlahyAI = () => {
-    navigation.navigate('FlahyAI');
-  };
-
-  const handleDeleteFile = (fileToDelete: any) => {
-      Alert.alert("Info", "Delete functionality coming soon");
-  };
-
-  const handleDownloadFile = async (file: any) => {
-      try {
-          await Share.share({
-              url: file.uri,
-              title: file.name,
-          });
-      } catch (error) {
-          Alert.alert("Error", "Could not download file.");
-      }
-  };
-
-  const uploadFileToServer = async (file: any) => {
-      setIsUploading(true);
-      try {
-          const formData = new FormData();
-          formData.append('file', {
-              uri: file.uri,
-              type: file.type,
-              name: file.name,
-          });
-          
-          await userService.uploadFile(formData);
-          Alert.alert("Success", "File uploaded successfully");
-          fetchFiles(); 
-      } catch (error: any) {
-          Alert.alert("Error", "Failed to upload file");
-          console.error(error);
-      } finally {
-          setIsUploading(false);
-      }
-  };
-
-  const handleUpload = () => {
-      Alert.alert(
-          "Upload",
-          "Choose source",
-          [
-              { text: "Files", onPress: pickDocument },
-              { text: "Photos", onPress: pickImage },
-              { text: "Cancel", style: "cancel" }
-          ]
-      );
-  };
-
-  const pickDocument = async () => {
-    try {
-      const results = await pick({
-        type: [types.allFiles],
-        allowMultiSelection: false, 
-      });
-      if (results && results[0]) {
-        uploadFileToServer(results[0]);
-      }
-    } catch (err: any) {
-       if (err.code === 'DOCUMENT_PICKER_CANCELED') return;
-       console.error('Unknown Error: ', err);
-    }
-  };
-
-  const pickImage = async () => {
-      const result = await launchImageLibrary({
-          mediaType: 'photo',
-          selectionLimit: 1, 
-      });
-
-      if (result.assets && result.assets[0]) {
-          const asset = result.assets[0];
-          const file = {
-              uri: asset.uri,
-              name: asset.fileName,
-              type: asset.type,
-              size: asset.fileSize,
-          };
-          uploadFileToServer(file);
-      }
-  };
-
-  const handleCamera = async () => {
-    if (Platform.OS === 'android') {
+    const fetchFiles = async () => {
+        setIsLoading(true);
         try {
-            const granted = await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.CAMERA,
-                {
-                    title: "Camera Permission",
-                    message: "Flahy needs access to your camera to take photos.",
-                    buttonNeutral: "Ask Me Later",
-                    buttonNegative: "Cancel",
-                    buttonPositive: "OK"
+            const response = await userService.getFiles();
+            console.log("🚀 ~ fetchFiles ~ response:", response)
+
+            // Ensure we target the array in 'data'
+            const list = Array.isArray(response.data) ? response.data : (response.data?.data || []);
+
+            const mappedFiles = list.map((file: any) => ({
+                id: file.id,
+                name: file.file_name || file.clientName || 'Unknown',
+                uri: file.report_url || file.filePath,
+                type: file.extname || (file.file_name ? file.file_name.split('.').pop() : 'unknown'),
+                size: file.size || 0,
+                date: file.created_at || file.createdAt
+            }));
+            setUploadedFiles(mappedFiles);
+        } catch (error) {
+            console.error("Failed to fetch files", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFiles();
+    }, []);
+
+    const handleDownloadReport = () => {
+        navigation.navigate('Reports');
+    };
+
+    const handleFlahyAI = () => {
+        navigation.navigate('FlahyAI');
+    };
+
+    const handleDeleteFile = (fileToDelete: any) => {
+        Alert.alert("Info", "Delete functionality coming soon");
+    };
+
+    const handleDownloadFile = async (file: any) => {
+        try {
+            await Share.share({
+                url: file.uri,
+                title: file.name,
+            });
+        } catch (error) {
+            Alert.alert("Error", "Could not download file.");
+        }
+    };
+
+    const uploadFileToServer = async (file: any) => {
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', {
+                uri: file.uri,
+                type: file.type,
+                name: file.name,
+            });
+
+            await userService.uploadFile(formData);
+            Alert.alert("Success", "File uploaded successfully");
+            fetchFiles();
+        } catch (error: any) {
+            Alert.alert("Error", "Failed to upload file");
+            console.error("Upload failed:", error);
+            if (error.response) {
+                console.error("Error response:", error.response.data);
+                console.error("Error status:", error.response.status);
+            }
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const handleUpload = () => {
+        Alert.alert(
+            "Upload",
+            "Choose source",
+            [
+                { text: "Files", onPress: pickDocument },
+                { text: "Photos", onPress: pickImage },
+                { text: "Cancel", style: "cancel" }
+            ]
+        );
+    };
+
+    const pickDocument = async () => {
+        try {
+            const results = await pick({
+                type: [types.allFiles],
+                allowMultiSelection: false,
+            });
+            if (results && results[0]) {
+                const doc = results[0];
+
+                console.log("Selected Doc:", doc);
+                // Client-side validation to match API requirements
+                const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'dcm'];
+                const extension = doc.name?.split('.').pop()?.toLowerCase();
+                console.log("Detected Extension:", extension);
+
+                if (!extension || !allowedExtensions.includes(extension)) {
+                    // Alert.alert("Invalid File", `File type ${extension} not allowed. Only pdf, jpg, png, dcm.`);
+                    // return;
+                    console.log("Validation failed but proceeding for debugging...");
                 }
-            );
-            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-                Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+
+                const file = {
+                    uri: doc.uri,
+                    name: doc.name || `document.${extension || 'pdf'}`,
+                    type: doc.type || (extension === 'pdf' ? 'application/pdf' : 'application/octet-stream'),
+                    size: doc.size
+                };
+                console.log("Picking Document:", file);
+                uploadFileToServer(file);
+            }
+        } catch (err: any) {
+            if (err.code === 'DOCUMENT_PICKER_CANCELED') return;
+            console.error('Unknown Error: ', err);
+        }
+    };
+
+    const pickImage = async () => {
+        const result = await launchImageLibrary({
+            mediaType: 'photo',
+            selectionLimit: 1,
+        });
+
+        if (result.assets && result.assets[0]) {
+            const asset = result.assets[0];
+            const file = {
+                uri: asset.uri,
+                name: asset.fileName,
+                type: asset.type,
+                size: asset.fileSize,
+            };
+            uploadFileToServer(file);
+        }
+    };
+
+    const handleCamera = async () => {
+        if (Platform.OS === 'android') {
+            try {
+                const granted = await PermissionsAndroid.request(
+                    PermissionsAndroid.PERMISSIONS.CAMERA,
+                    {
+                        title: "Camera Permission",
+                        message: "Flahy needs access to your camera to take photos.",
+                        buttonNeutral: "Ask Me Later",
+                        buttonNegative: "Cancel",
+                        buttonPositive: "OK"
+                    }
+                );
+                if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+                    Alert.alert("Permission Denied", "Camera permission is required to take photos.");
+                    return;
+                }
+            } catch (err) {
+                console.warn(err);
                 return;
             }
-        } catch (err) {
-            console.warn(err);
-            return;
         }
-    }
 
-    const result = await launchCamera({
-        mediaType: 'photo',
-        saveToPhotos: true,
-    });
+        const result = await launchCamera({
+            mediaType: 'photo',
+            saveToPhotos: true,
+        });
 
-    if (result.assets && result.assets[0]) {
-        const asset = result.assets[0];
-        const file = {
-            uri: asset.uri,
-            name: asset.fileName,
-            type: asset.type,
-            size: asset.fileSize,
-        };
-        uploadFileToServer(file);
-    }
-  };
+        if (result.assets && result.assets[0]) {
+            const asset = result.assets[0];
+            const file = {
+                uri: asset.uri,
+                name: asset.fileName,
+                type: asset.type,
+                size: asset.fileSize,
+            };
+            uploadFileToServer(file);
+        }
+    };
 
-  return (
-    <ScreenWrapper className="flex-1 bg-background" edges={['top']}>
-      <ScrollView 
-        className="flex-1" 
-        contentContainerStyle={{ paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchFiles} />}
-        showsVerticalScrollIndicator={false}
-      >
-        
-        {/* Header Section */}
-        <View className="px-6 pt-4 pb-2 flex-row justify-between items-start">
-            <View>
-                <View className="items-center flex-row mb-6">
-                    <Sprout size={28} color={colors.primary} />
-                    <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
-                </View>
-                <Text className="text-text-secondary font-medium text-base mb-1">Hi {user?.first_name || 'User'}</Text>
-                <Text className="text-text-primary font-bold text-2xl font-modern">Welcome to Dashboard</Text>
-            </View>
-            <View className="rounded-full overflow-hidden border-2 border-white shadow-sm">
-                <Image 
-                    source={{ uri: USER_AVATAR }} 
-                    className="w-12 h-12"
-                    resizeMode="cover"
-                />
-            </View>
-        </View>
-
-        {/* Search Bar */}
-        <View className="px-6 mt-6 mb-8">
-             <View className="bg-white border border-gray-300 rounded-2xl h-12 flex-row items-center px-4 shadow-sm">
-                 <Search size={20} color={colors['text-secondary']} />
-                 <TextInput 
-                    className="flex-1 ml-3 text-base text-text-primary h-full"
-                    placeholder="search..."
-                    placeholderTextColor={colors['text-secondary']}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                 />
-             </View>
-        </View>
-
-        {/* Action Hero Section */}
-        <View className="bg-mint rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
-        
-            {/* Download Report Button */}
-            <TouchableOpacity 
-                onPress={handleDownloadReport}
-                className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+    return (
+        <ScreenWrapper className="flex-1 bg-background" edges={['top']}>
+            <ScrollView
+                className="flex-1"
+                contentContainerStyle={{ paddingBottom: 100 }}
+                refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchFiles} />}
+                showsVerticalScrollIndicator={false}
             >
-                <FileText size={20} color="white" />
-                <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
-            </TouchableOpacity>
 
-            {/* Action Grid */}
-            <View className="flex-row justify-between gap-4 mb-8">
-                {/* FlahyAI */}
-                <TouchableOpacity 
-                    onPress={handleFlahyAI}
-                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
-                >
-                    <Sparkles size={28} color="white" />
-                    <Text className="text-white font-medium text-sm mt-2">FlahyAI</Text>
-                </TouchableOpacity>
-
-                {/* Upload */}
-                <TouchableOpacity 
-                    onPress={handleUpload}
-                    disabled={isUploading}
-                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
-                >
-                    {isUploading ? <ActivityIndicator color="white" /> : <CloudUpload size={28} color="white" />}
-                    <Text className="text-white font-medium text-sm mt-2">Upload</Text>
-                </TouchableOpacity>
-
-                {/* Camera */}
-                <TouchableOpacity 
-                    onPress={handleCamera}
-                    className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
-                >
-                    <Camera size={28} color="white" />
-                    <Text className="text-white font-medium text-sm mt-2">Camera</Text>
-                </TouchableOpacity>
-            </View>
-
-            {/* My Data Section Header in White Card Area */}
-            <View className="bg-white rounded-[32px] p-6 min-h-[300px] shadow-sm">
-                <View className="flex-row justify-between items-center mb-6">
-                    <Text className="text-text-primary text-lg font-semibold">My Data</Text>
-                    <TouchableOpacity className="bg-teal px-3 py-1.5 rounded-lg flex-row items-center">
-                        <Text className="text-white text-xs font-medium">Select file type</Text>
+                {/* Header Section */}
+                <View className="px-6 pt-4 pb-2 flex-row justify-between items-start">
+                    <View>
+                        <View className="items-center flex-row mb-6">
+                            <Sprout size={28} color={colors.primary} />
+                            <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
+                        </View>
+                        <Text className="text-text-secondary font-medium text-base mb-1">Hi {user?.first_name || 'User'}</Text>
+                        <Text className="text-text-primary font-bold text-2xl font-modern">Welcome to Dashboard</Text>
+                    </View>
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Settings')}
+                        className="rounded-full overflow-hidden border-2 border-white shadow-sm"
+                    >
+                        <Image
+                            source={{ uri: USER_AVATAR }}
+                            className="w-12 h-12"
+                            resizeMode="cover"
+                        />
                     </TouchableOpacity>
                 </View>
 
-                 <DataList 
-                    data={uploadedFiles} 
-                    onDelete={handleDeleteFile}
-                    onDownload={handleDownloadFile}
-                    emptyMessage="No Data Found."
-                />
-            </View>
+                {/* Search Bar */}
+                <View className="px-6 mt-6 mb-8">
+                    <View className="bg-white border border-gray-300 rounded-2xl h-12 flex-row items-center px-4 shadow-sm">
+                        <Search size={20} color={colors['text-secondary']} />
+                        <TextInput
+                            className="flex-1 ml-3 text-base text-text-primary h-full"
+                            placeholder="search..."
+                            placeholderTextColor={colors['text-secondary']}
+                            value={searchText}
+                            onChangeText={setSearchText}
+                        />
+                    </View>
+                </View>
 
-        </View>
+                {/* Action Hero Section */}
+                <View className="bg-mint rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
 
-      </ScrollView>
-    </ScreenWrapper>
-  );
+                    {/* Download Report Button */}
+                    <TouchableOpacity
+                        onPress={handleDownloadReport}
+                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+                    >
+                        <FileText size={20} color="white" />
+                        <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
+                    </TouchableOpacity>
+
+                    {/* Action Grid */}
+                    <View className="flex-row justify-between gap-4 mb-8">
+                        {/* FlahyAI */}
+                        <TouchableOpacity
+                            onPress={handleFlahyAI}
+                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                        >
+                            <Sparkles size={28} color="white" />
+                            <Text className="text-white font-medium text-sm mt-2">FlahyAI</Text>
+                        </TouchableOpacity>
+
+                        {/* Upload */}
+                        <TouchableOpacity
+                            onPress={handleUpload}
+                            disabled={isUploading}
+                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                        >
+                            {isUploading ? <ActivityIndicator color="white" /> : <CloudUpload size={28} color="white" />}
+                            <Text className="text-white font-medium text-sm mt-2">Upload</Text>
+                        </TouchableOpacity>
+
+                        {/* Camera */}
+                        <TouchableOpacity
+                            onPress={handleCamera}
+                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                        >
+                            <Camera size={28} color="white" />
+                            <Text className="text-white font-medium text-sm mt-2">Camera</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* My Data Section Header in White Card Area */}
+                    <View className="bg-white rounded-[32px] pt-6 min-h-[300px] shadow-sm">
+                        <DataList
+                            data={uploadedFiles}
+                            onDelete={handleDeleteFile}
+                            onDownload={handleDownloadFile}
+                            emptyMessage="No Data Found."
+                        />
+                    </View>
+
+                </View>
+
+            </ScrollView>
+        </ScreenWrapper>
+    );
 };

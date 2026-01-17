@@ -66,24 +66,36 @@ export const SettingsScreen = () => {
     };
 
     return (
-        <ScreenWrapper className="flex-1 bg-mint" edges={['top', 'left', 'right']}>
+        <ScreenWrapper style={{ flex: 1, backgroundColor: colors['green-light'] }} edges={['top', 'left', 'right']}>
             {/* Header */}
-            <View className="px-6 py-4 flex-row items-center mb-4">
+            <View style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>
                     <ArrowLeft size={24} color="#000" />
                 </TouchableOpacity>
-                <Text className="flex-1 text-center text-lg font-bold text-text-primary mr-6">Account Settings</Text>
+                <Text style={{ flex: 1, textAlign: 'center', fontSize: 18, fontWeight: 'bold', color: colors['text-primary'], marginRight: 24 }}>Account Settings</Text>
             </View>
 
             {/* Main Content Card (White with Top Radius) */}
-            <View className="flex-1 bg-white rounded-t-[40px] px-6 pt-8 shadow-sm">
+            <View style={{
+                flex: 1,
+                backgroundColor: 'white',
+                borderTopLeftRadius: 40,
+                borderTopRightRadius: 40,
+                paddingHorizontal: 24,
+                paddingTop: 32,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 2,
+                elevation: 2
+            }}>
                 <TabSwitcher 
                     tabs={['Profile', 'Change Password']}
                     activeTab={activeTab}
                     onTabChange={setActiveTab}
                 />
 
-                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} className="flex-1">
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
                         
                         {activeTab === 'Profile' ? (
@@ -93,32 +105,32 @@ export const SettingsScreen = () => {
                                 <CustomInput label="Last Name" value={lastName} onChangeText={setLastName} />
                                 <CustomInput label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" />
                                 
-                                <View className="mb-4">
-                                     <View className="flex-row justify-between mb-2">
-                                        <Text className="text-text-primary font-medium text-base">Phone No.</Text>
+                                <View style={{ marginBottom: 16 }}>
+                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <Text style={{ color: colors['text-primary'], fontWeight: '500', fontSize: 16 }}>Phone No.</Text>
                                      </View>
-                                     <View className="flex-row gap-3">
-                                         <View className="flex-1 bg-gray-100 border border-gray-200 rounded-xl h-14 justify-center px-4">
-                                             <Text className="text-text-primary text-base font-medium text-[#A0A0A0]">{phone}</Text>
+                                     <View style={{ flexDirection: 'row', gap: 12 }}>
+                                         <View style={{ flex: 1, backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#E5E7EB', borderRadius: 12, height: 56, justifyContent: 'center', paddingHorizontal: 16 }}>
+                                             <Text style={{ color: '#A0A0A0', fontSize: 16, fontWeight: '500' }}>{phone}</Text>
                                          </View>
                                      </View>
                                 </View>
 
                                 {/* Date of Birth */}
-                                <View className="mb-4">
-                                    <Text className="text-text-primary font-medium mb-2 text-base">Date of Birth</Text>
-                                    <View className="bg-white border border-gray-400 rounded-xl h-14 px-4 flex-row items-center justify-between">
-                                        <Text className="text-text-primary text-base font-medium">{dob || 'Not set'}</Text>
+                                <View style={{ marginBottom: 16 }}>
+                                    <Text style={{ color: colors['text-primary'], fontWeight: '500', marginBottom: 8, fontSize: 16 }}>Date of Birth</Text>
+                                    <View style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Text style={{ color: colors['text-primary'], fontSize: 16, fontWeight: '500' }}>{dob || 'Not set'}</Text>
                                         <Calendar size={20} color={colors['text-primary']} />
                                     </View>
                                 </View>
 
                                 {/* Gender */}
-                                <View className="mb-4">
-                                    <Text className="text-text-primary font-medium mb-2 text-base">Gender</Text>
-                                    <View className="bg-white border border-gray-400 rounded-xl h-14 px-4 flex-row items-center justify-between">
-                                        <Text className="text-[#A0A0A0] text-base font-medium capitalize">{gender || 'Not Select'}</Text>
-                                        <Text className="text-[10px] text-text-secondary">▼</Text>
+                                <View style={{ marginBottom: 16 }}>
+                                    <Text style={{ color: colors['text-primary'], fontWeight: '500', marginBottom: 8, fontSize: 16 }}>Gender</Text>
+                                    <View style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Text style={{ color: '#A0A0A0', fontSize: 16, fontWeight: '500', textTransform: 'capitalize' }}>{gender || 'Not Select'}</Text>
+                                        <Text style={{ fontSize: 10, color: colors['text-secondary'] }}>▼</Text>
                                     </View>
                                 </View>
                             </>
@@ -130,19 +142,34 @@ export const SettingsScreen = () => {
                         )}
 
                         <TouchableOpacity 
-                            className="bg-teal h-14 rounded-xl items-center justify-center mt-6 shadow-sm mb-10"
+                            style={{
+                                backgroundColor: colors.primary, // Using primary color for consistency or stick to 'teal' hex if desired
+                                height: 56,
+                                borderRadius: 12,
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginTop: 24,
+                                marginBottom: 40,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 1 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 2,
+                                elevation: 2
+                            }}
                             onPress={() => {
                                 Alert.alert("Info", "Update API not yet implemented");
                             }}
                         >
-                            <Text className="text-white font-semibold text-lg">Save</Text>
+                            <Text style={{ color: 'white', fontWeight: '600', fontSize: 18 }}>
+                                {activeTab === 'Change Password' ? 'Update Password' : 'Save Changes'}
+                            </Text>
                         </TouchableOpacity>
                         
                         <TouchableOpacity 
                             onPress={handleLogout}
-                            className="mt-4 bg-red-50 p-4 rounded-2xl items-center border border-red-100 mb-20"
+                            style={{ marginTop: 16, backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2', marginBottom: 80 }}
                         >
-                            <Text className="text-red-500 font-bold text-base">Log Out</Text>
+                            <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 16 }}>Log Out</Text>
                         </TouchableOpacity>
 
                     </ScrollView>

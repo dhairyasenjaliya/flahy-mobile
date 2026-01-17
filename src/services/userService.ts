@@ -13,7 +13,11 @@ export const userService = {
 
   uploadFile: async (fileData: any) => {
     // fileData should be FormData
-    const response = await api.post('/api/user/my-upload', fileData);
+    const response = await api.post('/api/user/my-upload', fileData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 

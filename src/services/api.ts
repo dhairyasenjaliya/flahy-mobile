@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Alert } from 'react-native';
 import { API_BASE_URL, API_TIMEOUT } from '../config';
 import { useAuthStore } from '../store/authStore';
 
@@ -26,8 +27,23 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
+    // Global Error Handling
+    if (error.response) {
+       if (error.response.status === 401) {
+           useAuthStore.getState().logout();
+           Alert.alert("Session Expired", "Please login again.");
+       } else {
+           // Try to get a meaningful error message from the server response
+           const message = error.response.data?.message || 
+                           error.response.data?.error || 
+                           "An unexpected error occurred.";
+           Alert.alert("Error", message);
+       }
+    } else if (error.request) {
+        // Network errors (no response received)
+        Alert.alert("Network Error", "Please check your internet connection.");
+    } else {
+        Alert.alert("Error", error.message || "An unexpected error occurred.");
     }
     return Promise.reject(error);
   }

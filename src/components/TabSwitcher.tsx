@@ -13,21 +13,32 @@ export const TabSwitcher: React.FC<TabSwitcherProps> = ({
   onTabChange 
 }) => {
   return (
-    <View className="bg-gray-200 rounded-xl p-1 flex-row h-12 mb-6">
+    <View style={{ backgroundColor: '#E5E7EB', borderRadius: 12, padding: 4, flexDirection: 'row', height: 48, marginBottom: 24 }}>
       {tabs.map((tab) => {
         const isActive = activeTab === tab;
         return (
           <TouchableOpacity
             key={tab}
             onPress={() => onTabChange(tab)}
-            className={`flex-1 items-center justify-center rounded-lg ${
-              isActive ? 'bg-teal shadow-sm' : 'bg-transparent'
-            }`}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderRadius: 8,
+              backgroundColor: isActive ? '#2CAEA6' : 'transparent', // Using teal hex from previous files
+              shadowColor: isActive ? '#000' : undefined,
+              shadowOffset: isActive ? { width: 0, height: 1 } : undefined,
+              shadowOpacity: isActive ? 0.1 : undefined,
+              shadowRadius: isActive ? 2 : undefined,
+              elevation: isActive ? 1 : undefined
+            }}
           >
             <Text 
-              className={`font-medium text-sm ${
-                isActive ? 'text-white' : 'text-text-secondary'
-              }`}
+              style={{
+                fontWeight: '500',
+                fontSize: 14,
+                color: isActive ? 'white' : '#6C7074' // text-secondary
+              }}
             >
               {tab}
             </Text>
