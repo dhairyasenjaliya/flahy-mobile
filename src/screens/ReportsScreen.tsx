@@ -105,7 +105,12 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
                         await CameraRoll.saveAsset(fileUri, { type: 'photo' });
                         require('react-native').Alert.alert('Saved!', 'Image saved to Photos.');
                     } else {
-                        RNBlobUtil.ios.openDocument(path.replace('file://', ''));
+                        // iOS: Use Share to allow 'Save to Files'
+                        const { Share } = require('react-native');
+                        const fileUri = path.startsWith('file://') ? path : `file://${path}`;
+                        await Share.share({
+                            url: fileUri,
+                        });
                     }
                 }
             } else {

@@ -195,9 +195,11 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                     );
                     Alert.alert('Saved!', 'File saved to Downloads.');
                 } else {
-                    // iOS: open native share/save sheet
-                    const cleanPath = cachedPath.replace('file://', '');
-                    ReactNativeBlobUtil.ios.openDocument(cleanPath);
+                    // iOS: Use Share to allow 'Save to Files'
+                    const cleanPath = cachedPath.startsWith('file://') ? cachedPath : `file://${cachedPath}`;
+                    await Share.share({
+                        url: cleanPath,
+                    });
                 }
             }
         } catch (err: any) {

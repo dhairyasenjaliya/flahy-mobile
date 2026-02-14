@@ -1,7 +1,7 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Camera, CloudUpload, FileText, Search, Sparkles, Sprout, X } from 'lucide-react-native';
+import { Camera, CloudUpload, FileText, Search, Sparkles, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -142,7 +142,12 @@ export const DashboardScreen = () => {
                     await CameraRoll.saveAsset(fileUri, { type: 'photo' });
                     Alert.alert('Saved!', 'Image saved to Photos.');
                 } else {
-                    RNBlobUtil.ios.openDocument(cachedPath.replace('file://', ''));
+                    // iOS: Use Share to allow 'Save to Files'
+                    const { Share } = require('react-native');
+                    const fileUri = cachedPath.startsWith('file://') ? cachedPath : `file://${cachedPath}`;
+                    await Share.share({
+                        url: fileUri,
+                    });
                 }
             }
         } catch (error: any) {
@@ -290,20 +295,20 @@ export const DashboardScreen = () => {
                 refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchFiles} />}
                 showsVerticalScrollIndicator={false}
             >
-
-                {/* Header Section */}
-                <View className="px-6 pt-4 pb-2">
-                    {/* Top Centered Logo */}
-                    <View className="items-center flex-row justify-center mb-6">
-                        <Sprout size={28} color={colors.primary} />
-                        <Text className="text-text-primary text-xl font-bold tracking-widest font-modern ml-2">FLAHY</Text>
-                    </View>
-                    
+                <View className="px-6 pt-4 pb-2"> 
+                    {/* User Greeting and Avatar Row */}
                     {/* User Greeting and Avatar Row */}
                     <View className="flex-row justify-between items-center">
-                        <View>
-                             <Text className="text-text-primary font-bold text-lg">Hi {user?.first_name || 'User'}</Text>
-                             <Text className="text-text-primary font-bold text-xl font-modern">Welcome to Dashboard</Text>
+                        <View className="flex-row items-center flex-1 mr-4">
+                            <Image 
+                                source={require('../assets/flahy_icon.png')} 
+                                className="w-10 h-10 mr-3"
+                                resizeMode="contain"
+                            />
+                            <View>
+                                <Text className="text-text-primary font-bold text-lg">Hi {user?.first_name || 'User'}</Text>
+                                <Text className="text-text-primary font-bold text-xl font-modern">Welcome to Dashboard</Text>
+                            </View>
                         </View>
                         <TouchableOpacity 
                             onPress={() => navigation.navigate('Settings')}
