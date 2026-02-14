@@ -6,6 +6,7 @@ import { FileViewerScreen } from '../screens/FileViewerScreen';
 import { FlahyAIScreen } from '../screens/FlahyAIScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
+import { SchedulePickupScreen } from '../screens/SchedulePickupScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { SupplementScreen } from '../screens/SupplementScreen';
 import { UploadScreen } from '../screens/UploadScreen';
@@ -48,15 +49,20 @@ export const RootNavigator = () => {
                 component={ReportsScreen} 
                 options={{ presentation: 'modal' }} 
             />
-            <Stack.Screen 
-                name="FileViewer" 
-                component={FileViewerScreen} 
+            <Stack.Screen
+                name="FileViewer"
+                component={FileViewerScreen}
                 options={{ animation: 'fade' }}
             />
-            <Stack.Screen 
-                name="Supplements" 
-                component={SupplementScreen} 
+            <Stack.Screen
+                name="Supplements"
+                component={SupplementScreen}
                 options={{ animation: 'slide_from_right' }}
+            />
+            <Stack.Screen
+                name="SchedulePickup"
+                component={SchedulePickupScreen}
+                options={{ animation: 'slide_from_bottom' }}
             />
         </>
       ) : (

@@ -10,4 +10,5 @@ export type RootStackParamList = {
   FileViewer: { file: any };
   FlahyAI: undefined;
   Supplements: undefined;
+  SchedulePickup: undefined;
 };

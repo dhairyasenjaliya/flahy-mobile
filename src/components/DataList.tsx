@@ -1,4 +1,4 @@
-import { ArrowUp, FileText, LayoutGrid, MoreHorizontal, MoreVertical, Star } from 'lucide-react-native';
+import { FileText, LayoutGrid, MoreHorizontal, MoreVertical, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
@@ -175,7 +175,6 @@ export const DataList = ({ data, onDownload, onDelete, onPress, emptyMessage }: 
                 <View className="flex-row items-center">
                      <Text className="text-[17px] font-medium text-text-primary mr-1">My Data</Text>
                      {/* Show arrow only if sortable/expandable? Screenshot 4 has arrow up */}
-                     <ArrowUp size={16} color={colors['text-primary']} />
                 </View>
 
                 {/* Right Side: Toggle or Filter Pill */}

@@ -1,6 +1,7 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Linking, SafeAreaView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Linking, Text, TouchableOpacity, View } from 'react-native';
+import { ScreenWrapper } from '../components/ScreenWrapper';
 import { Product, productService } from '../services/productService';
 import { colors } from '../theme/colors';
 
@@ -117,9 +118,8 @@ export const SupplementScreen = () => {
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#FFFBE6' }}>
-            <SafeAreaView style={{ flex: 1 }}>
-                
+        <ScreenWrapper className="flex-1 bg-[#FFFBE6]">
+                 
                 {/* Custom Header */}
                 <View className="px-6 pt-2 pb-6 items-center relative">
                     
@@ -150,7 +150,6 @@ export const SupplementScreen = () => {
                     />
                 </View>
 
-            </SafeAreaView>
-        </View>
+         </ScreenWrapper>
     );
 };

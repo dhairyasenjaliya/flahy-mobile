@@ -1,12 +1,14 @@
+
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Camera, CloudUpload, FileText, Search, ShoppingBag, Sparkles, X } from 'lucide-react-native';
+import { Calendar, Camera, CloudUpload, FileText, Package, Search, ShoppingBag, Sparkles, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { DataList } from '../components/DataList';
 import { ScreenWrapper } from '../components/ScreenWrapper';
+import { SupplementIntakeModal } from '../components/SupplementIntakeModal';
 import { RootStackParamList } from '../navigation/types';
 import { userService } from '../services/userService';
 import { useAuthStore } from '../store/authStore';
@@ -20,6 +22,7 @@ export const DashboardScreen = () => {
     const [uploadedFiles, setUploadedFiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
+    const [isSupplementModalVisible, setIsSupplementModalVisible] = useState(false);
     const user = useAuthStore((state) => state.user);
 
     const fetchFiles = async () => {
@@ -361,13 +364,31 @@ export const DashboardScreen = () => {
                 {/* Action Hero Section */}
                 <View className="bg-[#E2F1E6] rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
 
+                    {/* Schedule Pick-up Button */}
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('SchedulePickup')}
+                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
+                    >
+                        <Calendar size={20} color="white" />
+                        <Text className="text-white font-semibold text-base ml-2">Schedule Pick-up</Text>
+                    </TouchableOpacity>
+
                     {/* Download Report Button */}
                     <TouchableOpacity
                         onPress={handleDownloadReport}
-                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
                     >
                         <FileText size={20} color="white" />
                         <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
+                    </TouchableOpacity>
+
+                    {/* Products Button */}
+                    <TouchableOpacity
+                        onPress={() => navigation.navigate('Supplements')}
+                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+                    >
+                        <Package size={20} color="white" />
+                         <Text className="text-white font-semibold text-base ml-2">Products</Text>
                     </TouchableOpacity>
 
                     {/* Action Grid */}
@@ -400,9 +421,9 @@ export const DashboardScreen = () => {
                             <Text className="text-white font-medium text-sm mt-2">Camera</Text>
                         </TouchableOpacity>
 
-                        {/* Supplements */}
+                        {/* Supplements (Intake Modal) */}
                         <TouchableOpacity
-                            onPress={() => navigation.navigate('Supplements')}
+                            onPress={() => setIsSupplementModalVisible(true)}
                             className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
                         >
                             <ShoppingBag size={28} color="white" />
@@ -430,6 +451,16 @@ export const DashboardScreen = () => {
                 </View>
 
             </ScrollView>
+
+            <SupplementIntakeModal
+                visible={isSupplementModalVisible}
+                onClose={() => setIsSupplementModalVisible(false)}
+                onSubmit={(data: { name: string; dob: string; phone: string }) => {
+                    // Here you would typically send this data to the backend
+                    setIsSupplementModalVisible(false);
+                    navigation.navigate('Supplements');
+                }}
+            />
         </ScreenWrapper>
     );
 };
