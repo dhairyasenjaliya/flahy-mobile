@@ -55,12 +55,9 @@ api.interceptors.response.use(
        if (error.response.status === 401 && !isPublicEndpoint) {
            useAuthStore.getState().logout();
            Alert.alert("Session Expired", "Please login again.");
-       } else if (!isSilentEndpoint) {
-           // Try to get a meaningful error message from the server response
-           const message = error.response.data?.message || 
-                           error.response.data?.error || 
-                           "An unexpected error occurred.";
-           Alert.alert("Error", message);
+       } else {
+           // Log error for debugging, but let local try/catch handle the UI feedback
+           console.log(`[API Error] ${error.config.url}:`, error.response.data);
        }
     } else if (error.request) {
         // Network errors (no response received)
