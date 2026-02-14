@@ -1,6 +1,6 @@
 
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { initialMode?: 'welcome' | 'login' | 'signup' } | undefined;
   Dashboard: undefined;
   Settings: undefined;
   Upload: undefined;
