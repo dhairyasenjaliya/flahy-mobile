@@ -1,7 +1,7 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { ChevronDown, ChevronRight, X } from 'lucide-react-native';
+import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { RootStackParamList } from '../navigation/types';
 import { userService } from '../services/userService';
@@ -18,6 +18,7 @@ interface ReportFile {
     type: string;
     description: string;
     uri: string;
+    originalUri: string;
 }
 
 export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
@@ -42,7 +43,8 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
                 size: '0 KB', // API missing size
                 type: file.file_name?.split('.').pop() || 'doc',
                 description: file.description || 'No description available for this file.',
-                uri: file.report_url
+                uri: file.report_url,
+                originalUri: `https://api.flahyhealth.com/api/report/download-report/${file.id || file.report_id}`
             }));
             setReports(mapped);
         } catch (error) {
@@ -57,19 +59,78 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
     };
 
     const handleDownload = async (file: ReportFile) => {
-        // Placeholder for real download
-         try {
-            await Share.share({
-                url: file.uri,
-                title: file.name,
+        try {
+            const token = require('../store/authStore').useAuthStore.getState().token;
+            const RNBlobUtil = require('react-native-blob-util').default;
+            const { dirs } = RNBlobUtil.fs;
+            const Platform = require('react-native').Platform;
+            const fullUri = file.originalUri;
+            
+            const fileName = file.name || `report_${Date.now()}.${file.type}`;
+            const cachePath = `${dirs.CacheDir}/${fileName}`;
+
+            const res = await RNBlobUtil.config({
+                fileCache: true,
+                path: cachePath, // Save to cache first
+                timeout: 30000,
+            }).fetch('GET', fullUri, {
+                Authorization: `Bearer ${token}`,
             });
+
+            if (res.info().status === 200) {
+                const path = res.path();
+                const ext = fileName.split('.').pop()?.toLowerCase() || '';
+                const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+                
+                if (Platform.OS === 'android') {
+                    const mimeMap: Record<string, string> = {
+                        pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                        png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+                    };
+
+                    await RNBlobUtil.MediaCollection.copyToMediaStore(
+                        {
+                            name: fileName,
+                            parentFolder: '',
+                            mimeType: mimeMap[ext] || 'application/pdf' // Default to PDF for reports
+                        },
+                        isImg ? 'Image' : 'Download',
+                        path
+                    );
+                    require('react-native').Alert.alert('Saved!', isImg ? 'Image saved to Gallery.' : 'Report saved to Downloads.');
+                } else {
+                    if (isImg) {
+                        const { CameraRoll } = require('@react-native-camera-roll/camera-roll');
+                        const fileUri = path.startsWith('file://') ? path : `file://${path}`;
+                        await CameraRoll.saveAsset(fileUri, { type: 'photo' });
+                        require('react-native').Alert.alert('Saved!', 'Image saved to Photos.');
+                    } else {
+                        RNBlobUtil.ios.openDocument(path.replace('file://', ''));
+                    }
+                }
+            } else {
+                throw new Error('Download failed');
+            }
         } catch (error) {
-            // ignore
+            console.error('Download error:', error);
+            require('react-native').Alert.alert('Error', 'Failed to download report.');
         }
     };
 
+    const handleView = (file: ReportFile) => {
+        navigation.navigate('FileViewer', {
+            file: {
+                name: file.name,
+                uri: file.uri, // Thumbnail (if available, likely null for reports)
+                originalUri: file.originalUri,
+                type: 'pdf' // Defaulting to PDF for reports
+            }
+        });
+    };
+
     const renderItem = ({ item }: { item: ReportFile }) => {
-        const isExpanded = expandedId === item.id;
+        const isExpanded = true;
+        // const isExpanded = expandedId === item.id;
 
         return (
             <View className="mb-4 bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
@@ -84,30 +145,36 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
                         <Text className="text-text-primary font-bold text-base" numberOfLines={1}>{item.name}</Text>
                         <Text className="text-text-secondary text-xs mt-0.5">Submitted: {item.submitted}</Text>
                     </View>
-                    {isExpanded ? (
+                    {/* {isExpanded ? (
                         <ChevronDown size={20} color={colors['text-secondary']} />
                     ) : (
                         <ChevronRight size={20} color={colors['text-secondary']} />
-                    )}
+                    )} */}
                 </TouchableOpacity>
 
-                {isExpanded && (
+                
                     <View className="px-5 pb-6 pt-0">
                         <View className="h-[1px] bg-gray-100 mb-4 w-full" />
-                        <Text className="text-text-secondary text-sm leading-5 mb-6">
+                        {/* <Text className="text-text-secondary text-sm leading-5 mb-6">
                             {item.description}
-                        </Text>
+                        </Text> */}
                         
                         <View className="flex-row gap-4">
+                            <TouchableOpacity 
+                                onPress={() => handleView(item)}
+                                className="flex-1 bg-gray-100 py-3 rounded-xl items-center justify-center active:opacity-90 mr-2"
+                            >
+                                <Text className="text-text-primary font-medium text-sm">View</Text>
+                            </TouchableOpacity>
                             <TouchableOpacity 
                                 onPress={() => handleDownload(item)}
                                 className="flex-1 bg-teal py-3 rounded-xl items-center justify-center shadow-sm active:opacity-90"
                             >
-                                <Text className="text-white font-medium text-sm">Download / Share</Text>
+                                <Text className="text-white font-medium text-sm">Download</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                )}
+                 
             </View>
         );
     };

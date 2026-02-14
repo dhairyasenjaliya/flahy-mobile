@@ -1,10 +1,22 @@
-import { ArrowLeft, Download, FileText, Share2 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Dimensions, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { CameraRoll } from '@react-native-camera-roll/camera-roll';
+import { ArrowLeft, Download, FileText } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Dimensions,
+    PermissionsAndroid,
+    Platform,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import FastImage from 'react-native-fast-image';
+import Pdf from 'react-native-pdf';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import WebView from 'react-native-webview';
 import { API_BASE_URL } from '../config';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
@@ -14,116 +26,214 @@ const { width, height } = Dimensions.get('window');
 const getFullUrl = (uri: string) => {
     if (!uri) return '';
     if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
-    // Relative path — prepend base URL
     return `${API_BASE_URL}${uri.startsWith('/') ? '' : '/'}${uri}`;
+};
+
+const getMimeType = (ext: string) => {
+    const map: Record<string, string> = {
+        pdf: 'application/pdf',
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+    };
+    return map[ext] || 'application/octet-stream';
 };
 
 export const FileViewerScreen = ({ route, navigation }: any) => {
     const { file } = route.params;
     const token = useAuthStore((s) => s.token);
 
-    const fileExt = file.name?.split('.').pop()?.toLowerCase();
+    const fileExt = file.name?.split('.').pop()?.toLowerCase() || '';
     const isPdf = file.type?.toLowerCase().includes('pdf') || fileExt === 'pdf';
-    const isImage = !isPdf && (file.type?.toLowerCase().includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt));
+    const isImage =
+        !isPdf &&
+        (file.type?.toLowerCase().includes('image') ||
+            ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt));
 
-    const fullUri = getFullUrl(file.uri);
+    // Use originalUri (full-resolution original) for viewing/downloading, fall back to uri (thumbnail)
+    const fullUri = getFullUrl(file.originalUri || file.uri);
 
-    // For images: FastImage handles auth headers directly, no download needed
-    // For PDFs: download first, then display
+    // Local cached path for the file (used for PDF viewing, sharing, and downloads)
     const [localPath, setLocalPath] = useState<string | null>(null);
     const [isDownloading, setIsDownloading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const [imageLoading, setImageLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [pdfPageCount, setPdfPageCount] = useState(0);
+    const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
 
-    useEffect(() => {
-        if (!isImage) {
-            downloadFile();
-        }
-    }, []);
-
-    const downloadFile = async () => {
-        setIsDownloading(true);
-        setError(null);
+    // Download file to cache (for PDF viewing or later saving)
+    const downloadToCache = useCallback(async (): Promise<string | null> => {
         try {
             const { dirs } = ReactNativeBlobUtil.fs;
             const fileName = file.name || `file_${Date.now()}.${fileExt || 'pdf'}`;
             const cachePath = `${dirs.CacheDir}/${fileName}`;
 
-            console.log('Downloading file from:', fullUri);
+            console.log('[FileViewer] Downloading from:', fullUri);
+            console.log('[FileViewer] Cache path:', cachePath);
 
             const res = await ReactNativeBlobUtil.config({
                 fileCache: true,
                 path: cachePath,
+                timeout: 30000,
             }).fetch('GET', fullUri, {
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
             });
 
             const status = res.info().status;
-            console.log('Download status:', status);
+            const path = res.path();
+            console.log('[FileViewer] Download status:', status);
 
             if (status >= 200 && status < 300) {
-                const path = res.path();
-                setLocalPath(Platform.OS === 'ios' ? path : `file://${path}`);
+                const exists = await ReactNativeBlobUtil.fs.exists(path);
+                if (!exists) {
+                    throw new Error('Downloaded file not found on disk');
+                }
+                return path; // raw path, no file:// prefix
             } else {
-                setError(`Server returned status ${status}`);
+                throw new Error(`Server returned status ${status}`);
             }
         } catch (err: any) {
-            console.error('File download error:', err);
-            setError('Failed to load file. Please try again.');
+            console.error('[FileViewer] Download error:', err);
+            throw err;
+        }
+    }, [fullUri, token, file.name, fileExt]);
+
+    // On mount: download PDFs to cache for viewing
+    useEffect(() => {
+        if (isPdf) {
+            loadPdf();
+        }
+    }, []);
+
+    const loadPdf = async () => {
+        setIsDownloading(true);
+        setError(null);
+        try {
+            const path = await downloadToCache();
+            if (path) {
+                setLocalPath(path);
+            }
+        } catch (err: any) {
+            setError(err.message || 'Failed to load PDF');
         } finally {
             setIsDownloading(false);
         }
     };
 
-    const handleShare = async () => {
-        try {
-            await Share.share({
-                url: localPath || fullUri,
-                title: file.name,
-                message: `Check out this file: ${file.name}`,
-            });
-        } catch (err) {
-            console.error(err);
-        }
+    // ============ DOWNLOAD / SAVE ============
+
+    const requestStoragePermission = async () => {
+        if (Platform.OS !== 'android') return true;
+        // Android 10+ (API 29+) doesn't need WRITE_EXTERNAL_STORAGE for MediaStore
+        const sdkInt = Platform.Version;
+        if (typeof sdkInt === 'number' && sdkInt >= 29) return true;
+
+        const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.WRITE_EXTERNAL_STORAGE,
+            {
+                title: 'Storage Permission',
+                message: 'App needs storage access to save files.',
+                buttonPositive: 'Allow',
+            },
+        );
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
     };
 
-    const handleOpenNative = async () => {
-        // For images, download first if we haven't already
-        let pathToOpen = localPath;
-        if (!pathToOpen && isImage) {
-            try {
-                const { dirs } = ReactNativeBlobUtil.fs;
-                const fileName = file.name || `file_${Date.now()}.${fileExt || 'jpg'}`;
-                const cachePath = `${dirs.CacheDir}/${fileName}`;
-                const res = await ReactNativeBlobUtil.config({
-                    fileCache: true,
-                    path: cachePath,
-                }).fetch('GET', fullUri, {
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                });
-                pathToOpen = res.path();
-            } catch (err) {
-                console.error('Download for native open error:', err);
+    const handleSaveFile = async () => {
+        if (isSaving) return;
+        setIsSaving(true);
+
+        try {
+            const hasPermission = await requestStoragePermission();
+            if (!hasPermission) {
+                Alert.alert('Permission Denied', 'Storage permission is required to save files.');
                 return;
             }
-        }
-        if (!pathToOpen) return;
 
-        try {
-            const cleanPath = pathToOpen.replace('file://', '');
-            const mime = isPdf ? 'application/pdf' : 'image/jpeg';
-            if (Platform.OS === 'ios') {
-                ReactNativeBlobUtil.ios.openDocument(cleanPath);
-            } else {
-                ReactNativeBlobUtil.android.actionViewIntent(cleanPath, mime);
+            // Step 1: get a local cached copy
+            let cachedPath = localPath;
+            if (!cachedPath) {
+                cachedPath = await downloadToCache();
             }
-        } catch (err) {
-            console.error('Open native error:', err);
+            if (!cachedPath) {
+                Alert.alert('Error', 'Could not download file.');
+                return;
+            }
+
+            if (isImage) {
+                // Save image to Photos/Gallery
+                if (Platform.OS === 'android') {
+                    await ReactNativeBlobUtil.MediaCollection.copyToMediaStore(
+                        {
+                            name: file.name || `image_${Date.now()}.${fileExt}`,
+                            parentFolder: '',
+                            mimeType: getMimeType(fileExt),
+                        },
+                        'Image',
+                        cachedPath,
+                    );
+                } else {
+                    // iOS: save to camera roll
+                    const fileUri = cachedPath.startsWith('file://') ? cachedPath : `file://${cachedPath}`;
+                    await CameraRoll.saveAsset(fileUri, { type: 'photo' });
+                }
+                Alert.alert('Saved!', 'Image saved to your Photos.');
+            } else {
+                // Save PDF/other file to Downloads
+                if (Platform.OS === 'android') {
+                    await ReactNativeBlobUtil.MediaCollection.copyToMediaStore(
+                        {
+                            name: file.name || `file_${Date.now()}.${fileExt}`,
+                            parentFolder: '',
+                            mimeType: getMimeType(fileExt),
+                        },
+                        'Download',
+                        cachedPath,
+                    );
+                    Alert.alert('Saved!', 'File saved to Downloads.');
+                } else {
+                    // iOS: open native share/save sheet
+                    const cleanPath = cachedPath.replace('file://', '');
+                    ReactNativeBlobUtil.ios.openDocument(cleanPath);
+                }
+            }
+        } catch (err: any) {
+            console.error('[FileViewer] Save error:', err);
+            Alert.alert('Error', err.message || 'Failed to save file.');
+        } finally {
+            setIsSaving(false);
         }
     };
 
+    // ============ SHARE ============
+
+    const handleShare = async () => {
+        try {
+            let cachedPath = localPath;
+            if (!cachedPath) {
+                cachedPath = await downloadToCache();
+            }
+            if (!cachedPath) {
+                Alert.alert('Error', 'Could not download file for sharing.');
+                return;
+            }
+            const fileUri = cachedPath.startsWith('file://') ? cachedPath : `file://${cachedPath}`;
+            await Share.share({
+                url: fileUri,
+                title: file.name,
+            });
+        } catch (err: any) {
+            console.error('[FileViewer] Share error:', err);
+        }
+    };
+
+    // ============ RENDER CONTENT ============
+
     const renderContent = () => {
-        // Image: use FastImage directly with auth headers
+        // ---- IMAGE ----
         if (isImage) {
             return (
                 <View style={{ flex: 1, width }}>
@@ -140,7 +250,12 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                             </View>
                             <Text style={s.errorTitle}>Unable to load image</Text>
                             <Text style={s.errorSub}>{error}</Text>
-                            <TouchableOpacity style={s.retryBtn} onPress={() => { setError(null); setImageLoading(true); }}>
+                            <TouchableOpacity
+                                style={s.retryBtn}
+                                onPress={() => {
+                                    setError(null);
+                                    setImageLoading(true);
+                                }}>
                                 <Text style={s.retryText}>Retry</Text>
                             </TouchableOpacity>
                         </View>
@@ -164,16 +279,17 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
             );
         }
 
-        // PDF / other files: need download first
+        // ---- PDF: loading state ----
         if (isDownloading) {
             return (
                 <View style={s.centered}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                    <Text style={s.loadingText}>Loading file...</Text>
+                    <Text style={s.loadingText}>Loading PDF...</Text>
                 </View>
             );
         }
 
+        // ---- PDF: error or no local path ----
         if (error || !localPath) {
             return (
                 <View style={s.centered}>
@@ -182,62 +298,65 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                     </View>
                     <Text style={s.errorTitle}>Unable to load file</Text>
                     <Text style={s.errorSub}>{error || 'Something went wrong.'}</Text>
-                    <TouchableOpacity style={s.retryBtn} onPress={downloadFile}>
+                    <TouchableOpacity style={s.retryBtn} onPress={loadPdf}>
                         <Text style={s.retryText}>Retry</Text>
                     </TouchableOpacity>
                 </View>
             );
         }
 
+        // ---- PDF: render ----
         if (isPdf) {
-            if (Platform.OS === 'ios') {
-                return (
-                    <WebView
-                        source={{ uri: localPath }}
-                        style={{ flex: 1, width }}
-                        startInLoadingState
-                        renderLoading={() => (
-                            <View style={[s.centered, StyleSheet.absoluteFill]}>
-                                <ActivityIndicator size="large" color={colors.primary} />
-                            </View>
-                        )}
-                        onError={(e) => {
-                            console.error('WebView error:', e.nativeEvent);
+            const pdfSource = {
+                uri: localPath.startsWith('file://') ? localPath : `file://${localPath}`,
+                cache: true,
+            };
+
+            return (
+                <View style={{ flex: 1, width }}>
+                    <Pdf
+                        source={pdfSource}
+                        style={{ flex: 1, width, backgroundColor: '#222' }}
+                        trustAllCerts={false}
+                        onLoadComplete={(numberOfPages) => {
+                            console.log('[FileViewer] PDF loaded, pages:', numberOfPages);
+                            setPdfPageCount(numberOfPages);
+                        }}
+                        onPageChanged={(page) => {
+                            setPdfCurrentPage(page);
+                        }}
+                        onError={(err) => {
+                            console.error('[FileViewer] PDF render error:', err);
                             setError('Failed to render PDF.');
                         }}
+                        enablePaging={false}
+                        spacing={8}
                     />
-                );
-            }
-
-            // Android: open natively (most reliable for PDFs)
-            return (
-                <View style={s.centered}>
-                    <View style={s.pdfPreview}>
-                        <Text style={s.pdfLabel}>PDF</Text>
-                        <FileText size={36} color="#EF4444" />
-                    </View>
-                    <Text style={s.pdfName} numberOfLines={2}>{file.name}</Text>
-                    <Text style={s.pdfHint}>Tap below to open in your PDF viewer</Text>
-                    <TouchableOpacity style={s.openBtn} onPress={handleOpenNative}>
-                        <Download size={18} color="white" />
-                        <Text style={s.openBtnText}>Open PDF</Text>
-                    </TouchableOpacity>
+                    {pdfPageCount > 0 && (
+                        <View style={s.pageIndicator}>
+                            <Text style={s.pageText}>
+                                {pdfCurrentPage} / {pdfPageCount}
+                            </Text>
+                        </View>
+                    )}
                 </View>
             );
         }
 
-        // Fallback: try WebView
+        // ---- Fallback: unsupported format ----
         return (
-            <WebView
-                source={{ uri: localPath }}
-                style={{ flex: 1, width }}
-                startInLoadingState
-                renderLoading={() => (
-                    <View style={[s.centered, StyleSheet.absoluteFill]}>
-                        <ActivityIndicator size="large" color={colors.primary} />
-                    </View>
-                )}
-            />
+            <View style={s.centered}>
+                <View style={s.errorIcon}>
+                    <FileText size={40} color={colors['text-secondary']} />
+                </View>
+                <Text style={s.errorTitle}>Preview not available</Text>
+                <Text style={s.errorSub}>
+                    This file format ({fileExt}) cannot be previewed in-app.
+                </Text>
+                <TouchableOpacity style={s.retryBtn} onPress={handleSaveFile}>
+                    <Text style={s.retryText}>Download File</Text>
+                </TouchableOpacity>
+            </View>
         );
     };
 
@@ -249,22 +368,29 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                     <ArrowLeft size={22} color="white" />
                 </TouchableOpacity>
 
-                <Text style={s.headerTitle} numberOfLines={1}>{file.name}</Text>
+                <Text style={s.headerTitle} numberOfLines={1}>
+                    {file.name}
+                </Text>
 
                 <View style={s.headerActions}>
-                    <TouchableOpacity onPress={handleOpenNative} style={[s.headerBtn, { backgroundColor: colors.teal }]}>
-                        <Download size={18} color="white" />
+                    <TouchableOpacity
+                        onPress={handleSaveFile}
+                        disabled={isSaving}
+                        style={[s.headerBtn, { backgroundColor: colors.teal }]}>
+                        {isSaving ? (
+                            <ActivityIndicator size="small" color="white" />
+                        ) : (
+                            <Download size={18} color="white" />
+                        )}
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={handleShare} style={s.headerBtn}>
+                    {/* <TouchableOpacity onPress={handleShare} style={s.headerBtn}>
                         <Share2 size={18} color="white" />
-                    </TouchableOpacity>
+                    </TouchableOpacity> */}
                 </View>
             </View>
 
             {/* Content */}
-            <View style={s.content}>
-                {renderContent()}
-            </View>
+            <View style={s.content}>{renderContent()}</View>
         </SafeAreaView>
     );
 };
@@ -306,7 +432,7 @@ const s = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: '#111',
+        backgroundColor: '#222',
     },
     centered: {
         flex: 1,
@@ -351,48 +477,18 @@ const s = StyleSheet.create({
         fontWeight: '600',
         fontSize: 15,
     },
-    pdfPreview: {
-        width: 100,
-        height: 130,
-        backgroundColor: 'rgba(255,255,255,0.08)',
+    pageIndicator: {
+        position: 'absolute',
+        bottom: 16,
+        alignSelf: 'center',
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        paddingHorizontal: 14,
+        paddingVertical: 6,
         borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.12)',
-        marginBottom: 20,
     },
-    pdfLabel: {
-        color: '#EF4444',
-        fontWeight: '800',
-        fontSize: 13,
-        marginBottom: 8,
-    },
-    pdfName: {
+    pageText: {
         color: 'white',
-        fontSize: 17,
-        fontWeight: '600',
-        textAlign: 'center',
-        marginBottom: 8,
-        paddingHorizontal: 24,
-    },
-    pdfHint: {
-        color: '#888',
         fontSize: 13,
-        marginBottom: 28,
-    },
-    openBtn: {
-        backgroundColor: colors.teal,
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 28,
-        paddingVertical: 14,
-        borderRadius: 30,
-        gap: 10,
-    },
-    openBtnText: {
-        color: 'white',
-        fontWeight: '700',
-        fontSize: 15,
+        fontWeight: '500',
     },
 });

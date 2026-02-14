@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { FileViewerScreen } from '../screens/FileViewerScreen';
 import { FlahyAIScreen } from '../screens/FlahyAIScreen';
@@ -14,6 +15,16 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator = () => {
   const token = useAuthStore((state) => state.token);
+  const hasHydrated = useAuthStore((state) => state._hasHydrated);
+
+  // Show a loading screen until the persisted auth state has been restored
+  if (!hasHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFF0' }}>
+        <ActivityIndicator size="large" color="#2CAEA6" />
+      </View>
+    );
+  }
 
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -48,3 +59,4 @@ export const RootNavigator = () => {
     </Stack.Navigator>
   );
 };
+

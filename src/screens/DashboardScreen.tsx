@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Camera, CloudUpload, FileText, Search, Sparkles, Sprout, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { DataList } from '../components/DataList';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -35,6 +35,10 @@ export const DashboardScreen = () => {
                 id: file.id,
                 name: file.file_name || file.clientName || 'Unknown',
                 uri: file.report_url || file.filePath,
+                // Original file via download endpoint (same as web app)
+                originalUri: file.id
+                    ? `https://api.flahyhealth.com/api/report/download-report/${file.id}`
+                    : (file.report_url || file.filePath),
                 type: file.extname || (file.file_name ? file.file_name.split('.').pop() : 'unknown'),
                 size: file.size || 0,
                 date: file.created_at || file.createdAt
@@ -91,12 +95,59 @@ export const DashboardScreen = () => {
 
     const handleDownloadFile = async (file: any) => {
         try {
-            await Share.share({
-                url: file.uri,
-                title: file.name,
+            const sourceUri = file.originalUri || file.uri;
+            const fullUri = sourceUri?.startsWith('http')
+                ? sourceUri
+                : `https://api.flahyhealth.com${sourceUri?.startsWith('/') ? '' : '/'}${sourceUri}`;
+
+            const token = useAuthStore.getState().token;
+            const { dirs } = require('react-native-blob-util').default.fs;
+            const RNBlobUtil = require('react-native-blob-util').default;
+            const fileName = file.name || `file_${Date.now()}`;
+            const cachePath = `${dirs.CacheDir}/${fileName}`;
+
+            const res = await RNBlobUtil.config({
+                fileCache: true,
+                path: cachePath,
+                timeout: 30000,
+            }).fetch('GET', fullUri, {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
             });
-        } catch (error) {
-            Alert.alert("Error", "Could not download file.");
+
+            const status = res.info().status;
+            if (status < 200 || status >= 300) {
+                Alert.alert('Error', `Download failed (status ${status})`);
+                return;
+            }
+
+            const cachedPath = res.path();
+            const ext = file.name?.split('.').pop()?.toLowerCase() || '';
+            const isImg = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext);
+
+            if (Platform.OS === 'android') {
+                const mimeMap: Record<string, string> = {
+                    pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+                    png: 'image/png', gif: 'image/gif', webp: 'image/webp',
+                };
+                await RNBlobUtil.MediaCollection.copyToMediaStore(
+                    { name: fileName, parentFolder: '', mimeType: mimeMap[ext] || 'application/octet-stream' },
+                    isImg ? 'Image' : 'Download',
+                    cachedPath,
+                );
+                Alert.alert('Saved!', isImg ? 'Image saved to Gallery.' : 'File saved to Downloads.');
+            } else {
+                if (isImg) {
+                    const { CameraRoll } = require('@react-native-camera-roll/camera-roll');
+                    const fileUri = cachedPath.startsWith('file://') ? cachedPath : `file://${cachedPath}`;
+                    await CameraRoll.saveAsset(fileUri, { type: 'photo' });
+                    Alert.alert('Saved!', 'Image saved to Photos.');
+                } else {
+                    RNBlobUtil.ios.openDocument(cachedPath.replace('file://', ''));
+                }
+            }
+        } catch (error: any) {
+            console.error('Download error:', error);
+            Alert.alert('Error', 'Could not download file.');
         }
     };
 

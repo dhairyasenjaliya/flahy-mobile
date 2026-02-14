@@ -103,7 +103,7 @@ export const LoginScreen = () => {
                     setUser(response.data);
                     navigation.reset({
                         index: 0,
-                        routes: [{ name: 'Main' }],
+                        routes: [{ name: 'Dashboard' }],
                     });
                 } else {
                      Alert.alert("Error", "Invalid response from server");
@@ -279,7 +279,7 @@ export const LoginScreen = () => {
                                         }}
                                         keyboardType="number-pad"
                                         returnKeyType="done"
-                                        onSubmitEditing={handleContinue}
+                                        onSubmitEditing={() => handleContinue()}
                                         maxLength={6}
                                         autoFocus
                                         style={{ position: 'absolute', opacity: 0, height: 0, width: 0 }}
@@ -325,7 +325,7 @@ export const LoginScreen = () => {
                             
                             {/* Continue Button */}
                             <TouchableOpacity 
-                                onPress={handleContinue}
+                                onPress={() => handleContinue()}
                                 disabled={isLoading}
                                 className="h-14 bg-[#2CAEA6] rounded-xl items-center justify-center mt-8 active:opacity-90"
                             >
