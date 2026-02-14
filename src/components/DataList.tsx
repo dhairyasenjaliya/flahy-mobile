@@ -4,7 +4,7 @@ import { Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from
 import { colors } from '../theme/colors';
 
 type ViewMode = 'list' | 'grid';
-type FilterType = 'all' | 'pdf' | 'png' | 'jpeg' | 'jpg' | 'dcm' | 'image';
+type FilterType = 'all' | 'pdf' | 'image';
 
 interface DataListProps {
     data: any[];
@@ -26,11 +26,9 @@ export const DataList = ({ data, onDownload, onDelete, onPress, emptyMessage }: 
 
     const filteredData = data.filter(item => {
         if (filter === 'all') return true;
-        if (filter === 'pdf') return item.type?.includes('pdf');
-        if (filter === 'png') return item.type?.includes('png');
-        if (filter === 'jpeg') return item.type?.includes('jpeg');
-        if (filter === 'jpg') return item.type?.includes('jpg');
-        if (filter === 'dcm') return item.type?.includes('dcm');
+        const lowerType = item.type?.toLowerCase() || '';
+        if (filter === 'pdf') return lowerType.includes('pdf');
+        if (filter === 'image') return ['jpg', 'jpeg', 'png', 'gif', 'webp'].some(ext => lowerType.includes(ext));
         return true;
     });
 

@@ -1,7 +1,7 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Camera, CloudUpload, FileText, Search, Sparkles, X } from 'lucide-react-native';
+import { Camera, CloudUpload, FileText, Search, ShoppingBag, Sparkles, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -398,6 +398,15 @@ export const DashboardScreen = () => {
                         >
                             <Camera size={28} color="white" />
                             <Text className="text-white font-medium text-sm mt-2">Camera</Text>
+                        </TouchableOpacity>
+
+                        {/* Supplements */}
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Supplements')}
+                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                        >
+                            <ShoppingBag size={28} color="white" />
+                            <Text className="text-white font-medium text-sm mt-2">Supplements</Text>
                         </TouchableOpacity>
                     </View>
 

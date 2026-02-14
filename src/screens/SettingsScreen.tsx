@@ -97,7 +97,7 @@ export const SettingsScreen = () => {
     };
 
     return (
-        <ScreenWrapper style={{ flex: 1, backgroundColor: colors['green-light'] }} edges={['top', 'left', 'right']}>
+        <ScreenWrapper style={{ flex: 1, backgroundColor: colors['background'] }} edges={['top', 'left', 'right']}>
             {/* Header */}
             <View style={{ paddingHorizontal: 24, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <TouchableOpacity onPress={() => navigation.goBack()}>

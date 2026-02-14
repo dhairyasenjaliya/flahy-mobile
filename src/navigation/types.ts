@@ -9,4 +9,5 @@ export type RootStackParamList = {
   ReportViewer: { reportId: string };
   FileViewer: { file: any };
   FlahyAI: undefined;
+  Supplements: undefined;
 };

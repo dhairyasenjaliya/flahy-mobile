@@ -7,6 +7,7 @@ import { FlahyAIScreen } from '../screens/FlahyAIScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { ReportsScreen } from '../screens/ReportsScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { SupplementScreen } from '../screens/SupplementScreen';
 import { UploadScreen } from '../screens/UploadScreen';
 import { useAuthStore } from '../store/authStore';
 import { RootStackParamList } from './types';
@@ -51,6 +52,11 @@ export const RootNavigator = () => {
                 name="FileViewer" 
                 component={FileViewerScreen} 
                 options={{ animation: 'fade' }}
+            />
+            <Stack.Screen 
+                name="Supplements" 
+                component={SupplementScreen} 
+                options={{ animation: 'slide_from_right' }}
             />
         </>
       ) : (

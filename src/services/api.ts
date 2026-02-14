@@ -15,7 +15,9 @@ const api = axios.create({
 const publicEndpoints = [
     '/api/auth/user/send-otp',
     '/api/auth/user/verify-otp',
-    '/api/auth/user/login/check-type'
+    '/api/auth/user/login/check-type',
+    '/products',
+    '/product'
 ];
 
 api.interceptors.request.use(
