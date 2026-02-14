@@ -1,8 +1,7 @@
 import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Calendar, DateData } from 'react-native-calendars';
-import { colors } from '../theme/colors';
+import DatePicker from 'react-native-date-picker';
 
 interface SignupData {
     firstName: string;
@@ -33,13 +32,9 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
     const [gender, setGender] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
     
-    const [showCalendar, setShowCalendar] = useState(false);
+    const [date, setDate] = useState(new Date());
+    const [open, setOpen] = useState(false);
     const [showGenderPicker, setShowGenderPicker] = useState(false);
-
-    const onDayPress = (day: DateData) => {
-        setDob(day.dateString);
-        setShowCalendar(false);
-    };
 
     const handleContinue = () => {
         onSubmit({
@@ -58,10 +53,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
     return (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
             {/* Header */}
-            <View className="items-center mb-6">
-                 {/* Logo is handled by parent or we can add it here if needed, but design shows it at top of sheet */}
-            </View>
-
+            
             <View className="gap-4">
                 {/* First Name */}
                 <View>
@@ -139,26 +131,29 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                 <View className="z-20">
                     <Text className="text-text-primary font-medium mb-1.5 ml-1">Date of Birth</Text>
                     <TouchableOpacity 
-                        onPress={() => setShowCalendar(!showCalendar)}
+                        onPress={() => setOpen(true)}
                         className="bg-white border border-gray-300 rounded-xl px-4 h-12 flex-row items-center justify-between"
                     >
                         <Text className={dob ? "text-text-primary" : "text-[#9CA3AF]"}>{dob || "Select Date"}</Text>
                         <CalendarIcon size={20} color="#6B7280" />
                     </TouchableOpacity>
                      
-                     {showCalendar && (
-                        <View className="absolute top-14 left-0 right-0 bg-white border border-gray-200 rounded-xl shadow-lg z-50 p-2">
-                            <Calendar
-                                onDayPress={onDayPress}
-                                maxDate={new Date().toISOString().split('T')[0]}
-                                theme={{
-                                    selectedDayBackgroundColor: colors.teal,
-                                    todayTextColor: colors.teal,
-                                    arrowColor: colors.teal,
-                                }}
-                            />
-                        </View>
-                    )}
+                    <DatePicker
+                        modal
+                        open={open}
+                        date={date}
+                        mode="date"
+                        maximumDate={new Date()}
+                        onConfirm={(date: Date) => {
+                            setOpen(false);
+                            setDate(date);
+                            // Format: YYYY-MM-DD
+                            setDob(date.toISOString().split('T')[0]);
+                        }}
+                        onCancel={() => {
+                            setOpen(false);
+                        }}
+                    />
                 </View>
 
                 {/* Gender */}

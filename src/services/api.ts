@@ -8,6 +8,7 @@ const api = axios.create({
   timeout: API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
   },
 });
 
@@ -17,7 +18,8 @@ const publicEndpoints = [
     '/api/auth/user/verify-otp',
     '/api/auth/user/login/check-type',
     '/products',
-    '/product'
+    '/product',
+    '/api/user/register-user'
 ];
 
 api.interceptors.request.use(
@@ -48,11 +50,12 @@ api.interceptors.response.use(
     // Global Error Handling
     if (error.response) {
        const isPublicEndpoint = publicEndpoints.some(endpoint => error.config.url?.includes(endpoint));
+       const isSilentEndpoint = error.config.url?.includes('/api/user/register-user');
 
        if (error.response.status === 401 && !isPublicEndpoint) {
            useAuthStore.getState().logout();
            Alert.alert("Session Expired", "Please login again.");
-       } else {
+       } else if (!isSilentEndpoint) {
            // Try to get a meaningful error message from the server response
            const message = error.response.data?.message || 
                            error.response.data?.error || 

@@ -1,8 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ArrowLeft, Sprout } from 'lucide-react-native';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { SignupForm } from '../components/SignupForm';
 import { RootStackParamList } from '../navigation/types';
@@ -14,6 +15,23 @@ const BG_IMAGE = require('../assets/login_bg.jpg');
 
 import { RouteProp, useRoute } from '@react-navigation/native';
 // ...
+const KeyboardWrapper = ({ children }: { children: React.ReactNode }) => {
+    return Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+            {children}
+        </KeyboardAvoidingView>
+    ) : (
+        <KeyboardAwareScrollView 
+            contentContainerStyle={{ flexGrow: 1 }}
+            enableOnAndroid={true}
+            extraScrollHeight={20}
+            keyboardShouldPersistTaps="handled"
+        >
+            {children}
+        </KeyboardAwareScrollView>
+    );
+};
+
 export const LoginScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const route = useRoute<RouteProp<RootStackParamList, 'Login'>>(); // Get route params
@@ -110,10 +128,69 @@ export const LoginScreen = () => {
     };
 
     const handleSignupSubmit = async (data: any) => {
-        console.log("Signup Data:", data);
-        // Implement actual signup logic here later (send OTP? or direct register?)
-        // For now, let's pretend it goes to OTP or success
-        Alert.alert("Signup", "Signup flow to be implemented. Data logged.");
+        setIsLoading(true);
+        try {
+            // Normalize Data
+            const payload: any = {
+                first_name: data.firstName.trim(),
+                last_name: data.lastName.trim(),
+                email: data.email.trim().toLowerCase(),
+                contact: data.phone.trim(),
+                country_code: data.countryCode,
+                date_of_birth: data.dob,
+                gender: data.gender.toLowerCase(), // Ensure lowercase: "male", "female", "other"
+                user_type: "user",
+                consent: data.termsAccepted
+            };
+            
+            // Validate Required Fields
+            if (!payload.contact) {
+                Alert.alert("Validation Error", "Phone number is required.");
+                setIsLoading(false);
+                return;
+            }
+
+            // Only add middle_name if present
+            if (data.middleName && data.middleName.trim().length > 0) {
+                payload.middle_name = data.middleName.trim();
+            }
+
+            console.log("Signup Payload:", JSON.stringify(payload, null, 2));
+
+            const response = await authService.registerUser(payload);
+            console.log("Signup Response:", response);
+
+            if (response?.status === 200 || response?.status === 201 || response?.success) {
+                Alert.alert("Success", "Account created successfully! Please log in.");
+                setMode('login');
+            } else {
+                Alert.alert("Registration Failed", response?.message || "Please check your details.");
+            }
+        } catch (error: any) {
+            console.error("Signup Error Full:", JSON.stringify(error.response?.data, null, 2));
+            
+            // Enhanced Error Handling for 422
+            const serverMessage = error.response?.data?.message;
+            const validationErrors = error.response?.data?.errors; 
+            
+            let displayMessage = "An error occurred during signup.";
+
+            if (Array.isArray(validationErrors)) {
+                // Handle array of objects: [{ message: "...", ... }]
+                displayMessage = validationErrors.map((e: any) => e.message).filter(Boolean).join('\n');
+            } else if (validationErrors && typeof validationErrors === 'object') {
+                 // Handle object: { field: ["Error"] }
+                 displayMessage = Object.values(validationErrors).flat().join('\n');
+            } else if (serverMessage) {
+                displayMessage = typeof serverMessage === 'string' ? serverMessage : JSON.stringify(serverMessage);
+            } else {
+                 displayMessage = error.message || "Unknown error";
+            }
+            
+            Alert.alert("Error", displayMessage);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleBack = () => {
@@ -149,48 +226,50 @@ export const LoginScreen = () => {
     if (mode === 'signup') {
         return (
             <ScreenWrapper>
-                <View className="flex-1 px-4">
-                    <View className="flex-row items-center mb-6 mt-2 ml-1">
-                        <TouchableOpacity 
-                            onPress={handleBack}
-                            className="p-2 -ml-2 mr-2"
-                        >
-                            <ArrowLeft size={24} color={colors['text-primary']} />
-                        </TouchableOpacity>
-                        <Text className="text-text-primary text-2xl font-bold">Sign Up</Text>
+                <KeyboardAvoidingView 
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    className="flex-1"
+                >
+                    <View className="flex-1 px-4">
+                        <View className="flex-row items-center mb-2 mt-2 ml-1">
+                            <TouchableOpacity 
+                                onPress={handleBack}
+                                className="p-2 -ml-2 mr-2"
+                            >
+                                <ArrowLeft size={24} color={colors['text-primary']} />
+                            </TouchableOpacity>
+                            <Text className="text-text-primary text-2xl font-bold">Sign Up</Text>
+                        </View>
+                        <SignupForm 
+                            onSubmit={handleSignupSubmit} 
+                            isLoading={isLoading}
+                        />
                     </View>
-                    <SignupForm 
-                        onSubmit={handleSignupSubmit} 
-                        isLoading={isLoading}
-                    />
-                </View>
+                </KeyboardAvoidingView>
             </ScreenWrapper>
         );
     }
 
     return (
-        <View className="flex-1 bg-black">
-            {/* Background Image Section */}
-            <View className="flex-1">
-                <ImageBackground 
-                    source={BG_IMAGE} 
-                    className="flex-1 justify-start"
-                    resizeMode="cover"
-                />
-            </View>
+        <KeyboardWrapper>
+            <View className="flex-1 bg-black">
+                {/* Background Image Section - Flex-1 takes remaining space */}
+                <View className="flex-1 w-full relative">
+                    <ImageBackground 
+                        source={BG_IMAGE} 
+                        className="flex-1 justify-start"
+                        resizeMode="cover"
+                    />
+                </View>
 
-            {/* Bottom Sheet Content */}
+            {/* Bottom Sheet Content - No longer absolute, sits below image */}
             <View 
-                className="h-full absolute bottom-0 w-full justify-end"
+                className="w-full justify-end bg-black"
                 pointerEvents="box-none"
             >
-                 <KeyboardAvoidingView 
-                    behavior={Platform.OS === "ios" ? "padding" : "padding"} 
-                    keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-                    className="w-full"
-                >
 
-                    <View className={`bg-[#FFFFF0] rounded-t-[32px] px-8 pt-10 ${mode === 'welcome' ? 'pb-8' : 'pb-12'} w-full h-auto min-h-[40%] justify-between`}>
+
+                    <View className={`bg-[#FFFFF0] rounded-t-[32px] px-8 pt-10 ${mode === 'welcome' ? 'pb-8' : 'pb-12'} w-full -mt-8 justify-between`}>
                        
                         {/* Back Button */}
                         {(mode !== 'welcome') && (
@@ -205,15 +284,18 @@ export const LoginScreen = () => {
                         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
                             {/* Logo & Header */}
                             <View className="items-center mb-8">
-                                <View className="flex-row items-center gap-2 mb-6">
-                                    <Sprout size={32} color={colors.primary} />
-                                    <Text className="text-text-primary text-2xl font-bold tracking-widest font-modern">FLAHY</Text>
+                                <View className="flex-row items-center justify-center gap-4 mb-6">
+                                    <Image 
+                                        source={require('../assets/flahy_icon.png')} 
+                                        style={{ width: 60, height: 60 }} 
+                                        resizeMode="contain" 
+                                    />
+                                    <Text className="text-text-primary text-3xl font-bold tracking-widest font-modern mt-2">FLAHY</Text>
                                 </View>
                                 
                                 {mode === 'welcome' && (
                                      <>
                                         <Text className="text-text-primary text-2xl font-medium text-center">Welcome Back</Text>
-                                        <Text className="text-text-secondary mt-2 text-base">Log in to your account</Text>
                                      </>
                                 )}
                                 
@@ -395,9 +477,9 @@ export const LoginScreen = () => {
                             )}
                         </ScrollView>
                     </View>
-                 </KeyboardAvoidingView>
             </View>
-        </View>
+            </View>
+        </KeyboardWrapper>
     );
 };
 
