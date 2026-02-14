@@ -31,15 +31,18 @@ export const userService = {
     return response.data;
   },
 
-  updateProfile: async (data: any) => {
-    const response = await api.put('/api/user', data);
+  updateProfile: async (userId: string, data: any) => {
+    const response = await api.put(`/api/user/${userId}`, data);
     return response.data;
   },
 
-  createPassword: async (password: string) => {
-    // Using create-password as typical for setting new password, or reset-password
-    // Based on apiRoutes.js: createPassword: "/api/user/create-password"
-    const response = await api.post('/api/user/create-password', { password });
+  createPassword: async (password: string, confirm_password: string) => {
+    const response = await api.post('/api/user/create-password', { password, confirm_password });
+    return response.data;
+  },
+
+  resetPassword: async (current_password: string, new_password: string, confirm_password: string) => {
+    const response = await api.post('/api/user/reset-password', { current_password, new_password, confirm_password });
     return response.data;
   }
 };

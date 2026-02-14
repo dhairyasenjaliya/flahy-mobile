@@ -8,7 +8,7 @@ import { authService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 
-const BG_IMAGE = require('../assets/login_bg.png');
+const BG_IMAGE = require('../assets/login_bg.jpg');
 
 export const LoginScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();

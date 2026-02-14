@@ -1,7 +1,6 @@
-
-import { ArrowLeft, Calendar } from 'lucide-react-native';
+import { ArrowLeft, Calendar, ChevronDown } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { CustomInput } from '../components/CustomInput';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { TabSwitcher } from '../components/TabSwitcher';
@@ -10,6 +9,25 @@ import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 
 import { useNavigation } from '@react-navigation/native';
+
+const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function getDaysInMonth(month: number, year: number) {
+    return new Date(year, month + 1, 0).getDate();
+}
+
+function formatDate(date: Date): string {
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = MONTHS[date.getMonth()];
+    const y = date.getFullYear();
+    return `${d} ${m} ${y}`;
+}
+
+function toISODate(date: Date): string {
+    return date.toISOString().split('T')[0];
+}
 
 export const SettingsScreen = () => {
     const navigation = useNavigation();
@@ -25,6 +43,16 @@ export const SettingsScreen = () => {
     const [dob, setDob] = useState("");
     const [gender, setGender] = useState("");
 
+    const [dobDate, setDobDate] = useState<Date | null>(null);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [showGenderPicker, setShowGenderPicker] = useState(false);
+
+    // Temp date picker state
+    const [tempDay, setTempDay] = useState(1);
+    const [tempMonth, setTempMonth] = useState(0);
+    const [tempYear, setTempYear] = useState(2000);
+
+    const [currentPassword, setCurrentPassword] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
@@ -47,8 +75,11 @@ export const SettingsScreen = () => {
                  setLastName(userData.last_name || "");
                  setEmail(userData.email || "");
                  setPhone(userData.contact || "");
-                 // Format DOB if needed
-                 setDob(userData.date_of_birth ? new Date(userData.date_of_birth).toDateString() : "");
+                 if (userData.date_of_birth) {
+                     const d = new Date(userData.date_of_birth);
+                     setDobDate(d);
+                     setDob(formatDate(d));
+                 }
                  setGender(userData.gender || "");
             }
         } catch (error) {
@@ -119,23 +150,40 @@ export const SettingsScreen = () => {
                                 {/* Date of Birth */}
                                 <View style={{ marginBottom: 16 }}>
                                     <Text style={{ color: colors['text-primary'], fontWeight: '500', marginBottom: 8, fontSize: 16 }}>Date of Birth</Text>
-                                    <View style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Text style={{ color: colors['text-primary'], fontSize: 16, fontWeight: '500' }}>{dob || 'Not set'}</Text>
+                                    <TouchableOpacity
+                                        onPress={() => {
+                                            const d = dobDate ?? new Date(2000, 0, 1);
+                                            setTempDay(d.getDate());
+                                            setTempMonth(d.getMonth());
+                                            setTempYear(d.getFullYear());
+                                            setShowDatePicker(true);
+                                        }}
+                                        activeOpacity={0.7}
+                                        style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                                    >
+                                        <Text style={{ color: dob ? colors['text-primary'] : '#A0A0A0', fontSize: 16, fontWeight: '500' }}>{dob || 'Select date'}</Text>
                                         <Calendar size={20} color={colors['text-primary']} />
-                                    </View>
+                                    </TouchableOpacity>
                                 </View>
 
                                 {/* Gender */}
                                 <View style={{ marginBottom: 16 }}>
                                     <Text style={{ color: colors['text-primary'], fontWeight: '500', marginBottom: 8, fontSize: 16 }}>Gender</Text>
-                                    <View style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <Text style={{ color: '#A0A0A0', fontSize: 16, fontWeight: '500', textTransform: 'capitalize' }}>{gender || 'Not Select'}</Text>
-                                        <Text style={{ fontSize: 10, color: colors['text-secondary'] }}>▼</Text>
-                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => setShowGenderPicker(true)}
+                                        activeOpacity={0.7}
+                                        style={{ backgroundColor: 'white', borderWidth: 1, borderColor: '#9CA3AF', borderRadius: 12, height: 56, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                                    >
+                                        <Text style={{ color: gender ? colors['text-primary'] : '#A0A0A0', fontSize: 16, fontWeight: '500', textTransform: 'capitalize' }}>{gender || 'Select gender'}</Text>
+                                        <ChevronDown size={20} color={colors['text-secondary']} />
+                                    </TouchableOpacity>
                                 </View>
                             </>
                         ) : (
                              <>
+                                {user?.password_created && (
+                                    <CustomInput label="Current Password" placeholder="Current Password" value={currentPassword} onChangeText={setCurrentPassword} secureTextEntry />
+                                )}
                                 <CustomInput label="New Password" placeholder="New Password" value={password} onChangeText={setPassword} secureTextEntry />
                                 <CustomInput label="Confirm Password" placeholder="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
                              </>
@@ -162,11 +210,12 @@ export const SettingsScreen = () => {
                                 setIsLoading(true);
                                 try {
                                     if (activeTab === 'Profile') {
-                                        await userService.updateProfile({
+                                        await userService.updateProfile(user?.id, {
                                             first_name: firstName,
                                             last_name: lastName,
                                             email: email,
-                                            // omitting sensitive fields if not editable or handle separately
+                                            ...(dobDate ? { date_of_birth: toISODate(dobDate) } : {}),
+                                            ...(gender ? { gender: gender.toLowerCase() } : {}),
                                         });
                                         Alert.alert("Success", "Profile updated successfully");
                                         await fetchProfile(); // Refresh
@@ -179,8 +228,17 @@ export const SettingsScreen = () => {
                                             Alert.alert("Error", "Passwords do not match");
                                             return;
                                         }
-                                        await userService.createPassword(password);
+                                        if (user?.password_created) {
+                                            if (!currentPassword) {
+                                                Alert.alert("Error", "Please enter your current password");
+                                                return;
+                                            }
+                                            await userService.resetPassword(currentPassword, password, confirmPassword);
+                                        } else {
+                                            await userService.createPassword(password, confirmPassword);
+                                        }
                                         Alert.alert("Success", "Password updated successfully");
+                                        setCurrentPassword("");
                                         setPassword("");
                                         setConfirmPassword("");
                                     }
@@ -208,6 +266,118 @@ export const SettingsScreen = () => {
                     </ScrollView>
                 </KeyboardAvoidingView>
             </View>
+
+            {/* Gender Picker Modal */}
+            <Modal visible={showGenderPicker} transparent animationType="slide">
+                <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setShowGenderPicker(false)}>
+                    <Pressable style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                            <Text style={{ fontSize: 18, fontWeight: '600', color: colors['text-primary'] }}>Select Gender</Text>
+                            <TouchableOpacity onPress={() => setShowGenderPicker(false)}>
+                                <Text style={{ fontSize: 16, color: colors['text-secondary'] }}>Cancel</Text>
+                            </TouchableOpacity>
+                        </View>
+                        {GENDER_OPTIONS.map(option => (
+                            <TouchableOpacity
+                                key={option}
+                                onPress={() => {
+                                    setGender(option.toLowerCase());
+                                    setShowGenderPicker(false);
+                                }}
+                                style={{
+                                    paddingHorizontal: 24,
+                                    paddingVertical: 16,
+                                    borderBottomWidth: 1,
+                                    borderBottomColor: '#F3F4F6',
+                                    backgroundColor: gender === option.toLowerCase() ? colors['green-light'] : 'white',
+                                }}
+                            >
+                                <Text style={{
+                                    fontSize: 16,
+                                    fontWeight: gender === option.toLowerCase() ? '600' : '400',
+                                    color: gender === option.toLowerCase() ? colors.primary : colors['text-primary'],
+                                }}>{option}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
+            {/* Date Picker Modal */}
+            <Modal visible={showDatePicker} transparent animationType="slide">
+                <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }} onPress={() => setShowDatePicker(false)}>
+                    <Pressable style={{ backgroundColor: 'white', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 40 }}>
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                                <Text style={{ fontSize: 16, color: colors['text-secondary'] }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <Text style={{ fontSize: 18, fontWeight: '600', color: colors['text-primary'] }}>Date of Birth</Text>
+                            <TouchableOpacity onPress={() => {
+                                const maxDay = getDaysInMonth(tempMonth, tempYear);
+                                const clampedDay = Math.min(tempDay, maxDay);
+                                const selected = new Date(tempYear, tempMonth, clampedDay);
+                                setDobDate(selected);
+                                setDob(formatDate(selected));
+                                setShowDatePicker(false);
+                            }}>
+                                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.primary }}>Done</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Picker Columns */}
+                        <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8 }}>
+                            {/* Day */}
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ textAlign: 'center', fontSize: 13, color: colors['text-secondary'], marginBottom: 8, fontWeight: '500' }}>Day</Text>
+                                <ScrollView style={{ height: 180 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 70 }}>
+                                    {Array.from({ length: getDaysInMonth(tempMonth, tempYear) }, (_, i) => i + 1).map(d => (
+                                        <TouchableOpacity
+                                            key={d}
+                                            onPress={() => setTempDay(d)}
+                                            style={{ paddingVertical: 10, alignItems: 'center', backgroundColor: tempDay === d ? colors['green-light'] : 'transparent', borderRadius: 8, marginHorizontal: 4 }}
+                                        >
+                                            <Text style={{ fontSize: 18, fontWeight: tempDay === d ? '700' : '400', color: tempDay === d ? colors.primary : colors['text-primary'] }}>{d}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+
+                            {/* Month */}
+                            <View style={{ flex: 1.2 }}>
+                                <Text style={{ textAlign: 'center', fontSize: 13, color: colors['text-secondary'], marginBottom: 8, fontWeight: '500' }}>Month</Text>
+                                <ScrollView style={{ height: 180 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 70 }}>
+                                    {MONTHS.map((m, i) => (
+                                        <TouchableOpacity
+                                            key={m}
+                                            onPress={() => setTempMonth(i)}
+                                            style={{ paddingVertical: 10, alignItems: 'center', backgroundColor: tempMonth === i ? colors['green-light'] : 'transparent', borderRadius: 8, marginHorizontal: 4 }}
+                                        >
+                                            <Text style={{ fontSize: 18, fontWeight: tempMonth === i ? '700' : '400', color: tempMonth === i ? colors.primary : colors['text-primary'] }}>{m}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+
+                            {/* Year */}
+                            <View style={{ flex: 1 }}>
+                                <Text style={{ textAlign: 'center', fontSize: 13, color: colors['text-secondary'], marginBottom: 8, fontWeight: '500' }}>Year</Text>
+                                <ScrollView style={{ height: 180 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 70 }}>
+                                    {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                        <TouchableOpacity
+                                            key={y}
+                                            onPress={() => setTempYear(y)}
+                                            style={{ paddingVertical: 10, alignItems: 'center', backgroundColor: tempYear === y ? colors['green-light'] : 'transparent', borderRadius: 8, marginHorizontal: 4 }}
+                                        >
+                                            <Text style={{ fontSize: 18, fontWeight: tempYear === y ? '700' : '400', color: tempYear === y ? colors.primary : colors['text-primary'] }}>{y}</Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </ScrollView>
+                            </View>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </ScreenWrapper>
     );
 };

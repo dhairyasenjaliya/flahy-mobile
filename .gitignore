@@ -76,3 +76,6 @@ yarn-error.log
 
 API
 flahybase-ui-web
+
+# Claude Code
+.claude/settings.json
