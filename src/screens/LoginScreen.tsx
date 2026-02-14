@@ -33,6 +33,7 @@ export const LoginScreen = () => {
     }, [step, timer]);
 
     const handleContinue = async (otpOverride?: string) => {
+        if (isLoading) return; // Prevent duplicate calls
         if (step === 'input') {
             // Determine which method to use
             let method = activeInput;
@@ -61,6 +62,7 @@ export const LoginScreen = () => {
                 }
             }
             
+            setIsLoading(true);
             try {
                 if (method === 'phone') {
                     // Stripping any typed country code if necessary, but assuming clean input for now
@@ -219,7 +221,6 @@ export const LoginScreen = () => {
                                                 placeholderTextColor="#A0A0A0"
                                                 keyboardType="phone-pad"
                                                 returnKeyType="done"
-                                                onSubmitEditing={() => handleContinue()}
                                                 value={phoneNumber}
                                                 onChangeText={(text) => {
                                                     setPhoneNumber(text);
@@ -250,7 +251,6 @@ export const LoginScreen = () => {
                                                 keyboardType="email-address"
                                                 autoCapitalize="none"
                                                 returnKeyType="done"
-                                                onSubmitEditing={() => handleContinue()}
                                                 value={email}
                                                 onChangeText={(text) => {
                                                     setEmail(text);

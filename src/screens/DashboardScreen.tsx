@@ -1,7 +1,7 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Camera, CloudUpload, FileText, Search, Sparkles, Sprout } from 'lucide-react-native';
+import { Camera, CloudUpload, FileText, Search, Sparkles, Sprout, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -268,16 +268,36 @@ export const DashboardScreen = () => {
                 </View>
 
                 {/* Search Bar */}
-                <View className="px-6 mt-6 mb-8">
-                    <View className="bg-white border border-gray-300 rounded-2xl h-12 flex-row items-center px-4 shadow-sm">
-                        <Search size={20} color={colors['text-secondary']} />
+                <View style={{ paddingHorizontal: 24, marginTop: 20, marginBottom: 28 }}>
+                    <View style={{
+                        backgroundColor: 'white',
+                        borderWidth: 1,
+                        borderColor: searchText ? colors.primary : '#E5E7EB',
+                        borderRadius: 16,
+                        height: 48,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingHorizontal: 14,
+                        shadowColor: '#000',
+                        shadowOffset: { width: 0, height: 1 },
+                        shadowOpacity: 0.05,
+                        shadowRadius: 3,
+                        elevation: 1,
+                    }}>
+                        <Search size={18} color={searchText ? colors.primary : colors['text-secondary']} />
                         <TextInput
-                            className="flex-1 ml-3 text-base text-text-primary h-full"
-                            placeholder="search..."
+                            style={{ flex: 1, marginLeft: 10, fontSize: 15, color: colors['text-primary'], padding: 0 }}
+                            placeholder="Search files..."
                             placeholderTextColor={colors['text-secondary']}
                             value={searchText}
                             onChangeText={setSearchText}
+                            returnKeyType="search"
                         />
+                        {searchText.length > 0 && (
+                            <TouchableOpacity onPress={() => setSearchText('')} style={{ padding: 4 }}>
+                                <X size={16} color={colors['text-secondary']} />
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 
@@ -328,14 +348,17 @@ export const DashboardScreen = () => {
                     {/* My Data Section Header in White Card Area */}
                     <View className="bg-white rounded-t-[40px] pt-8 min-h-[400px] shadow-sm -mx-6">
                         <DataList
-                            data={uploadedFiles}
+                            data={searchText
+                                ? uploadedFiles.filter(f => f.name?.toLowerCase().includes(searchText.toLowerCase()))
+                                : uploadedFiles
+                            }
                             onDelete={handleDeleteFile}
                             onDownload={handleDownloadFile}
                             onPress={(file) => {
                                 console.log('File clicked:', file.name);
                                 navigation.navigate('FileViewer', { file });
                             }}
-                            emptyMessage="No Data Found."
+                            emptyMessage={searchText ? "No files matching your search." : "No Data Found."}
                         />
                     </View>
 

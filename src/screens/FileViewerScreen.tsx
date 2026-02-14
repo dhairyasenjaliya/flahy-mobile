@@ -1,140 +1,398 @@
-import { ArrowLeft, Download, Share2 } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { ActivityIndicator, Dimensions, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
+import { ArrowLeft, Download, FileText, Share2 } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Platform, Share, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import FastImage from 'react-native-fast-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
+import { API_BASE_URL } from '../config';
+import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
-import { downloadAndOpenFile } from '../utils/fileUtils';
 
 const { width, height } = Dimensions.get('window');
 
+const getFullUrl = (uri: string) => {
+    if (!uri) return '';
+    if (uri.startsWith('http://') || uri.startsWith('https://')) return uri;
+    // Relative path — prepend base URL
+    return `${API_BASE_URL}${uri.startsWith('/') ? '' : '/'}${uri}`;
+};
+
 export const FileViewerScreen = ({ route, navigation }: any) => {
     const { file } = route.params;
-    const [isLoading, setIsLoading] = useState(true);
+    const token = useAuthStore((s) => s.token);
 
     const fileExt = file.name?.split('.').pop()?.toLowerCase();
     const isPdf = file.type?.toLowerCase().includes('pdf') || fileExt === 'pdf';
-    const isImage = !isPdf && (file.type?.toLowerCase().includes('image') ||  ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt));
+    const isImage = !isPdf && (file.type?.toLowerCase().includes('image') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt));
+
+    const fullUri = getFullUrl(file.uri);
+
+    // For images: FastImage handles auth headers directly, no download needed
+    // For PDFs: download first, then display
+    const [localPath, setLocalPath] = useState<string | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!isImage) {
+            downloadFile();
+        }
+    }, []);
+
+    const downloadFile = async () => {
+        setIsDownloading(true);
+        setError(null);
+        try {
+            const { dirs } = ReactNativeBlobUtil.fs;
+            const fileName = file.name || `file_${Date.now()}.${fileExt || 'pdf'}`;
+            const cachePath = `${dirs.CacheDir}/${fileName}`;
+
+            console.log('Downloading file from:', fullUri);
+
+            const res = await ReactNativeBlobUtil.config({
+                fileCache: true,
+                path: cachePath,
+            }).fetch('GET', fullUri, {
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            });
+
+            const status = res.info().status;
+            console.log('Download status:', status);
+
+            if (status >= 200 && status < 300) {
+                const path = res.path();
+                setLocalPath(Platform.OS === 'ios' ? path : `file://${path}`);
+            } else {
+                setError(`Server returned status ${status}`);
+            }
+        } catch (err: any) {
+            console.error('File download error:', err);
+            setError('Failed to load file. Please try again.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     const handleShare = async () => {
         try {
             await Share.share({
-                url: file.uri,
+                url: localPath || fullUri,
                 title: file.name,
-                message: `Check out this file: ${file.name}`
+                message: `Check out this file: ${file.name}`,
             });
-        } catch (error) {
-            console.error(error);
+        } catch (err) {
+            console.error(err);
         }
     };
 
-    const handleDownload = async () => {
+    const handleOpenNative = async () => {
+        // For images, download first if we haven't already
+        let pathToOpen = localPath;
+        if (!pathToOpen && isImage) {
+            try {
+                const { dirs } = ReactNativeBlobUtil.fs;
+                const fileName = file.name || `file_${Date.now()}.${fileExt || 'jpg'}`;
+                const cachePath = `${dirs.CacheDir}/${fileName}`;
+                const res = await ReactNativeBlobUtil.config({
+                    fileCache: true,
+                    path: cachePath,
+                }).fetch('GET', fullUri, {
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                });
+                pathToOpen = res.path();
+            } catch (err) {
+                console.error('Download for native open error:', err);
+                return;
+            }
+        }
+        if (!pathToOpen) return;
+
         try {
-            // Use the secure download helper
-            setIsLoading(true); // Reuse isLoading or add a specific one? Reusing is fine if it covers the UI.
-            await downloadAndOpenFile(file.uri, file.name, isPdf ? 'application/pdf' : 'image/jpeg'); // guessing mime if not PDF
-        } catch (error) {
-            // Alert handled in helper
-        } finally {
-            setIsLoading(false);
+            const cleanPath = pathToOpen.replace('file://', '');
+            const mime = isPdf ? 'application/pdf' : 'image/jpeg';
+            if (Platform.OS === 'ios') {
+                ReactNativeBlobUtil.ios.openDocument(cleanPath);
+            } else {
+                ReactNativeBlobUtil.android.actionViewIntent(cleanPath, mime);
+            }
+        } catch (err) {
+            console.error('Open native error:', err);
         }
     };
 
-    const getViewUrl = () => {
-        if (isImage) return file.uri;
-        // Basic fallback for unknown types or specific docs
-        if (isPdf) {
-             // For Android, Google Docs is good for viewing.
-             // For iOS, WebView handles PDF natively nicely.
-             if(Platform.OS === 'android') {
-                 return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(file.uri)}`;
-             }
-             return file.uri;
+    const renderContent = () => {
+        // Image: use FastImage directly with auth headers
+        if (isImage) {
+            return (
+                <View style={{ flex: 1, width }}>
+                    {imageLoading && (
+                        <View style={[s.centered, StyleSheet.absoluteFill, { zIndex: 1 }]}>
+                            <ActivityIndicator size="large" color={colors.primary} />
+                            <Text style={s.loadingText}>Loading image...</Text>
+                        </View>
+                    )}
+                    {error ? (
+                        <View style={s.centered}>
+                            <View style={s.errorIcon}>
+                                <FileText size={40} color={colors['text-secondary']} />
+                            </View>
+                            <Text style={s.errorTitle}>Unable to load image</Text>
+                            <Text style={s.errorSub}>{error}</Text>
+                            <TouchableOpacity style={s.retryBtn} onPress={() => { setError(null); setImageLoading(true); }}>
+                                <Text style={s.retryText}>Retry</Text>
+                            </TouchableOpacity>
+                        </View>
+                    ) : (
+                        <FastImage
+                            source={{
+                                uri: fullUri,
+                                headers: token ? { Authorization: `Bearer ${token}` } : {},
+                                priority: FastImage.priority.high,
+                            }}
+                            style={{ width, height: height * 0.8 }}
+                            resizeMode={FastImage.resizeMode.contain}
+                            onLoadEnd={() => setImageLoading(false)}
+                            onError={() => {
+                                setImageLoading(false);
+                                setError('Failed to load image.');
+                            }}
+                        />
+                    )}
+                </View>
+            );
         }
-        return `https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(file.uri)}`;
+
+        // PDF / other files: need download first
+        if (isDownloading) {
+            return (
+                <View style={s.centered}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={s.loadingText}>Loading file...</Text>
+                </View>
+            );
+        }
+
+        if (error || !localPath) {
+            return (
+                <View style={s.centered}>
+                    <View style={s.errorIcon}>
+                        <FileText size={40} color={colors['text-secondary']} />
+                    </View>
+                    <Text style={s.errorTitle}>Unable to load file</Text>
+                    <Text style={s.errorSub}>{error || 'Something went wrong.'}</Text>
+                    <TouchableOpacity style={s.retryBtn} onPress={downloadFile}>
+                        <Text style={s.retryText}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        if (isPdf) {
+            if (Platform.OS === 'ios') {
+                return (
+                    <WebView
+                        source={{ uri: localPath }}
+                        style={{ flex: 1, width }}
+                        startInLoadingState
+                        renderLoading={() => (
+                            <View style={[s.centered, StyleSheet.absoluteFill]}>
+                                <ActivityIndicator size="large" color={colors.primary} />
+                            </View>
+                        )}
+                        onError={(e) => {
+                            console.error('WebView error:', e.nativeEvent);
+                            setError('Failed to render PDF.');
+                        }}
+                    />
+                );
+            }
+
+            // Android: open natively (most reliable for PDFs)
+            return (
+                <View style={s.centered}>
+                    <View style={s.pdfPreview}>
+                        <Text style={s.pdfLabel}>PDF</Text>
+                        <FileText size={36} color="#EF4444" />
+                    </View>
+                    <Text style={s.pdfName} numberOfLines={2}>{file.name}</Text>
+                    <Text style={s.pdfHint}>Tap below to open in your PDF viewer</Text>
+                    <TouchableOpacity style={s.openBtn} onPress={handleOpenNative}>
+                        <Download size={18} color="white" />
+                        <Text style={s.openBtnText}>Open PDF</Text>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        // Fallback: try WebView
+        return (
+            <WebView
+                source={{ uri: localPath }}
+                style={{ flex: 1, width }}
+                startInLoadingState
+                renderLoading={() => (
+                    <View style={[s.centered, StyleSheet.absoluteFill]}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                    </View>
+                )}
+            />
+        );
     };
 
     return (
-        <SafeAreaView className="flex-1 bg-black" edges={['top', 'bottom']}>
+        <SafeAreaView style={s.container} edges={['top', 'bottom']}>
             {/* Header */}
-            <View className="flex-row items-center justify-between px-4 py-3 bg-black/50 absolute top-10 left-0 right-0 z-50">
-                <TouchableOpacity 
-                    onPress={() => navigation.goBack()}
-                    className="w-10 h-10 items-center justify-center rounded-full bg-white/20"
-                >
-                    <ArrowLeft size={24} color="white" />
+            <View style={s.header}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+                    <ArrowLeft size={22} color="white" />
                 </TouchableOpacity>
 
-                <Text className="text-white font-medium text-base flex-1 mx-4 text-center" numberOfLines={1}>
-                    {file.name}
-                </Text>
+                <Text style={s.headerTitle} numberOfLines={1}>{file.name}</Text>
 
-                <View className="flex-row gap-2">
-                    {/* Explicit Download for PDFs */}
-                    {isPdf && (
-                         <TouchableOpacity 
-                            onPress={handleDownload}
-                            className="w-10 h-10 items-center justify-center rounded-full bg-teal"
-                        >
-                            <Download size={20} color="white" />
-                        </TouchableOpacity>
-                    )}
-                    <TouchableOpacity 
-                        onPress={handleShare}
-                        className="w-10 h-10 items-center justify-center rounded-full bg-white/20"
-                    >
-                        <Share2 size={20} color="white" />
+                <View style={s.headerActions}>
+                    <TouchableOpacity onPress={handleOpenNative} style={[s.headerBtn, { backgroundColor: colors.teal }]}>
+                        <Download size={18} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleShare} style={s.headerBtn}>
+                        <Share2 size={18} color="white" />
                     </TouchableOpacity>
                 </View>
             </View>
 
             {/* Content */}
-            <View className="flex-1 justify-center bg-black items-center">
-                {isImage ? (
-                    <Image
-                        source={{ uri: file.uri }}
-                        style={{ width, height: height * 0.8 }}
-                        resizeMode="contain"
-                    />
-                ) : isPdf ? (
-                    <View className="items-center justify-center px-6">
-                        <View className="w-24 h-32 bg-white/10 rounded-xl items-center justify-center mb-6 border border-white/20">
-                             <Text className="text-red-500 font-bold text-xl mb-2">PDF</Text>
-                        </View>
-                        <Text className="text-white text-lg font-medium text-center mb-2">{file.name}</Text>
-                        <Text className="text-gray-400 text-sm mb-8 text-center px-8">
-                            This document is a PDF. Open it in your default viewer for the best experience.
-                        </Text>
-                        
-                        <TouchableOpacity 
-                            onPress={handleDownload}
-                            className="bg-teal px-8 py-4 rounded-full flex-row items-center active:opacity-90"
-                            disabled={isLoading}
-                        >
-                            {isLoading ? (
-                                <ActivityIndicator color="white" className="mr-2" />
-                            ) : (
-                                <Download size={20} color="white" className="mr-2" />
-                            )}
-                            <Text className="text-white font-bold text-base ml-2">
-                                {isLoading ? "Downloading..." : "Open PDF"}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                ) : (
-                    <WebView
-                        source={{ uri: getViewUrl() }}
-                        className="flex-1 w-full"
-                        startInLoadingState={true}
-                        renderLoading={() => (
-                            <View className="absolute inset-0 items-center justify-center bg-black">
-                                <ActivityIndicator size="large" color={colors.primary} />
-                            </View>
-                        )}
-                        onError={(err) => console.error("WebView Error:", err.nativeEvent)}
-                    />
-                )}
+            <View style={s.content}>
+                {renderContent()}
             </View>
         </SafeAreaView>
     );
 };
+
+const s = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#111',
+    },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+    },
+    headerBtn: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.15)',
+    },
+    headerTitle: {
+        flex: 1,
+        color: 'white',
+        fontWeight: '500',
+        fontSize: 15,
+        textAlign: 'center',
+        marginHorizontal: 12,
+    },
+    headerActions: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    content: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#111',
+    },
+    centered: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 32,
+    },
+    loadingText: {
+        color: '#999',
+        fontSize: 14,
+        marginTop: 16,
+    },
+    errorIcon: {
+        width: 80,
+        height: 80,
+        borderRadius: 40,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 20,
+    },
+    errorTitle: {
+        color: 'white',
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 8,
+    },
+    errorSub: {
+        color: '#999',
+        fontSize: 14,
+        textAlign: 'center',
+        marginBottom: 24,
+    },
+    retryBtn: {
+        backgroundColor: colors.teal,
+        paddingHorizontal: 32,
+        paddingVertical: 12,
+        borderRadius: 12,
+    },
+    retryText: {
+        color: 'white',
+        fontWeight: '600',
+        fontSize: 15,
+    },
+    pdfPreview: {
+        width: 100,
+        height: 130,
+        backgroundColor: 'rgba(255,255,255,0.08)',
+        borderRadius: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.12)',
+        marginBottom: 20,
+    },
+    pdfLabel: {
+        color: '#EF4444',
+        fontWeight: '800',
+        fontSize: 13,
+        marginBottom: 8,
+    },
+    pdfName: {
+        color: 'white',
+        fontSize: 17,
+        fontWeight: '600',
+        textAlign: 'center',
+        marginBottom: 8,
+        paddingHorizontal: 24,
+    },
+    pdfHint: {
+        color: '#888',
+        fontSize: 13,
+        marginBottom: 28,
+    },
+    openBtn: {
+        backgroundColor: colors.teal,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 28,
+        paddingVertical: 14,
+        borderRadius: 30,
+        gap: 10,
+    },
+    openBtnText: {
+        color: 'white',
+        fontWeight: '700',
+        fontSize: 15,
+    },
+});
