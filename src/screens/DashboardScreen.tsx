@@ -2,7 +2,7 @@
 import { pick, types } from '@react-native-documents/picker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Calendar, Camera, CloudUpload, FileText, Package, Search, ShoppingBag, Sparkles, X } from 'lucide-react-native';
+import { Calendar, Camera, CloudUpload, FileText, Package, Search, ShoppingBag, Sparkles, User, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -315,13 +315,9 @@ export const DashboardScreen = () => {
                         </View>
                         <TouchableOpacity 
                             onPress={() => navigation.navigate('Settings')}
-                            className="rounded-full overflow-hidden"
+                            className="w-12 h-12 bg-teal/10 rounded-full items-center justify-center border border-teal/20"
                         >
-                            <Image 
-                                source={{ uri: USER_AVATAR }} 
-                                className="w-12 h-12 rounded-full"
-                                resizeMode="cover"
-                            />
+                            <User size={24} color={colors.teal} />
                         </TouchableOpacity>
                     </View>
                 </View>

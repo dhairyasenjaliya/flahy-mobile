@@ -1,4 +1,4 @@
-import { FileText, LayoutGrid, MoreHorizontal, MoreVertical, Star } from 'lucide-react-native';
+import { FileText, Filter, LayoutGrid, MoreHorizontal, Star } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Dimensions, FlatList, Image, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../theme/colors';
@@ -191,8 +191,7 @@ export const DataList = ({ data, onDownload, onDelete, onPress, emptyMessage }: 
                             activeOpacity={0.8}
                         >
                             {/* <Filter size={14} color="white" className="mr-2" /> */}
-                            {/* Icon looks like sliders? Or just text? Screenshot 2 has Icon + Text */}
-                            <MoreVertical size={14} color="white" style={{ transform: [{ rotate: '90deg' }] }} /> 
+                            <Filter size={16} color="white" />
                             <Text className="text-white text-xs font-medium ml-2">Select file type</Text>
                         </TouchableOpacity>
 
