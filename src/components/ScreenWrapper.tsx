@@ -1,19 +1,18 @@
-import React from 'react';
 import { ViewStyle } from 'react-native';
 import { Edges, SafeAreaView } from 'react-native-safe-area-context';
 
 interface ScreenWrapperProps {
   children: React.ReactNode;
   style?: ViewStyle;
-  className?: string;
-  edges?: Edges; // Correct type from the library
+  className?: string; // NativeWind support
+  edges?: Edges;
 }
 
 export const ScreenWrapper: React.FC<ScreenWrapperProps> = ({ 
   children, 
   style, 
   className,
-  edges = ['top', 'left', 'right', 'bottom'] // Default value matches Edges type
+  edges = ['top', 'left', 'right', 'bottom']
 }) => {
   return (
     <SafeAreaView 

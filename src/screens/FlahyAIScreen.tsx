@@ -574,7 +574,12 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     return (
         <ScreenWrapper className="flex-1 bg-background" edges={['top', 'bottom']}>
-            <Header showBack={true} onBack={() => navigation.goBack()} />
+            <Header 
+                showBack={true} 
+                onBack={() => navigation.goBack()} 
+                title="FlahyAI"
+                subtitle="Your Personal Health AI"
+            />
 
             {isInitializing ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
@@ -605,12 +610,6 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                             }
                         }}
                         keyboardShouldPersistTaps="handled"
-                        ListHeaderComponent={
-                            <View style={{ marginBottom: 20, paddingLeft: 40 }}>
-                                <Text style={{ fontSize: 22, fontWeight: '700', color: colors['text-primary'] }}>FlahyAI</Text>
-                                <Text style={{ fontSize: 14, color: colors['text-secondary'], marginTop: 4 }}>Your Personal Health AI</Text>
-                            </View>
-                        }
                         ListFooterComponent={
                             messages.length < 3 ? (
                                 <View className="mt-6">
