@@ -146,11 +146,17 @@ export const useChatStore = create<ChatState>()(
     }),
     {
       name: 'chat-storage',
+      version: 1,
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         threads: state.threads,
         currentThreadId: state.currentThreadId,
         lastSyncedAt: state.lastSyncedAt,
+      }),
+      migrate: () => ({
+        threads: [],
+        currentThreadId: null,
+        lastSyncedAt: null,
       }),
     }
   )

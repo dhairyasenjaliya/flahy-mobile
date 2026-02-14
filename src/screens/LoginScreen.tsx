@@ -1,8 +1,8 @@
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft, Sprout } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ImageBackground, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { RootStackParamList } from '../navigation/types';
 import { authService } from '../services/authService';
 import { useAuthStore } from '../store/authStore';
@@ -21,6 +21,7 @@ export const LoginScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
     const setToken = useAuthStore((state) => state.setToken);
     const setUser = useAuthStore((state) => state.setUser);
+    const otpInputRef = useRef<TextInput>(null);
 
     // Timer logic
     useEffect(() => {
@@ -31,7 +32,7 @@ export const LoginScreen = () => {
         return () => clearInterval(interval);
     }, [step, timer]);
 
-    const handleContinue = async () => {
+    const handleContinue = async (otpOverride?: string) => {
         if (step === 'input') {
             // Determine which method to use
             let method = activeInput;
@@ -77,15 +78,14 @@ export const LoginScreen = () => {
             }
         } else {
             // Verify OTP
-            if (!otp) {
+            const otpValue = otpOverride ?? otp;
+            if (!otpValue) {
                 Alert.alert("Error", "Please enter OTP");
                 return;
             }
 
             setIsLoading(true);
             try {
-                // We need to know which contact was used. Re-derive or store it.
-                // Re-deriving for simplicity (assuming state hasn't changed)
                 let method = activeInput;
                 if (!method) {
                      if (phoneNumber && !email) method = 'phone';
@@ -94,7 +94,7 @@ export const LoginScreen = () => {
                 }
                 const contact = method === 'phone' ? phoneNumber : email;
 
-                const response = await authService.verifyOtp(contact, otp, method === 'phone' ? 2 : 1, method === 'phone' ? '+91' : '');
+                const response = await authService.verifyOtp(contact, otpValue, method === 'phone' ? 2 : 1, method === 'phone' ? '+91' : '');
                 
                 if (response.token) {
                     setToken(response.token);
@@ -180,7 +180,7 @@ export const LoginScreen = () => {
                             </TouchableOpacity>
                         )}
 
-                        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+                        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 20 }}>
                             {/* Logo & Header */}
                             <View className="items-center mb-8">
                                 <View className="flex-row items-center gap-2 mb-6">
@@ -214,10 +214,12 @@ export const LoginScreen = () => {
                                                 <Text className="text-[10px] text-text-secondary">▼</Text>
                                             </View>
                                             <TextInput
-                                                className="flex-1 px-4 text-text-primary text-base h-full"
+                                                style={{ flex: 1, paddingHorizontal: 16, color: colors['text-primary'], fontSize: 16, padding: 0 }}
                                                 placeholder="123456789"
                                                 placeholderTextColor="#A0A0A0"
                                                 keyboardType="phone-pad"
+                                                returnKeyType="done"
+                                                onSubmitEditing={() => handleContinue()}
                                                 value={phoneNumber}
                                                 onChangeText={(text) => {
                                                     setPhoneNumber(text);
@@ -225,8 +227,6 @@ export const LoginScreen = () => {
                                                 }}
                                                 onFocus={() => {
                                                     setActiveInput('phone');
-                                                    // Optional: Clear email if we want strictly one
-                                                    // setEmail(''); 
                                                 }}
                                             />
                                         </View>
@@ -244,11 +244,13 @@ export const LoginScreen = () => {
                                         <Text className="text-text-primary font-medium mb-2">Email address</Text>
                                         <View className={`border rounded-xl overflow-hidden h-14 bg-white items-center flex-row ${activeInput === 'email' ? 'border-primary' : 'border-gray-300'}`}>
                                             <TextInput
-                                                className="flex-1 px-4 text-text-primary text-base h-full"
+                                                style={{ flex: 1, paddingHorizontal: 16, color: colors['text-primary'], fontSize: 16, padding: 0 }}
                                                 placeholder="john.carter@gmail.com"
                                                 placeholderTextColor="#A0A0A0"
                                                 keyboardType="email-address"
                                                 autoCapitalize="none"
+                                                returnKeyType="done"
+                                                onSubmitEditing={() => handleContinue()}
                                                 value={email}
                                                 onChangeText={(text) => {
                                                     setEmail(text);
@@ -256,37 +258,65 @@ export const LoginScreen = () => {
                                                 }}
                                                 onFocus={() => {
                                                     setActiveInput('email');
-                                                    // Optional: Clear phone
-                                                    // setPhoneNumber('');
                                                 }}
                                             />
                                         </View>
                                     </View>
                                 </View>
                             ) : (
-                                /* OTP Input */
-                                <View className="mb-8">
-                                     <View className="items-center mb-6">
-                                        <View className={`border-b-2 w-40 items-center pb-2 ${otp ? 'border-primary' : 'border-gray-300'}`}>
-                                            <TextInput 
-                                                value={otp}
-                                                onChangeText={setOtp}
-                                                placeholder="0 0 0 0 0 0"
-                                                placeholderTextColor="#D1D5DB"
-                                                keyboardType="number-pad"
-                                                className="text-3xl font-bold text-text-primary text-center tracking-[12px] w-full"
-                                                maxLength={6}
-                                                autoFocus
-                                            />
-                                        </View>
-                                    </View>
+                                /* OTP Input — 6 individual boxes */
+                                <View style={{ marginBottom: 32 }}>
+                                    {/* Hidden TextInput captures keyboard */}
+                                    <TextInput
+                                        ref={otpInputRef}
+                                        value={otp}
+                                        onChangeText={(text) => {
+                                            const cleaned = text.replace(/[^0-9]/g, '');
+                                            setOtp(cleaned);
+                                            if (cleaned.length === 6) {
+                                                handleContinue(cleaned);
+                                            }
+                                        }}
+                                        keyboardType="number-pad"
+                                        returnKeyType="done"
+                                        onSubmitEditing={handleContinue}
+                                        maxLength={6}
+                                        autoFocus
+                                        style={{ position: 'absolute', opacity: 0, height: 0, width: 0 }}
+                                    />
 
-                                    <TouchableOpacity 
+                                    {/* Visual OTP boxes */}
+                                    <Pressable
+                                        onPress={() => otpInputRef.current?.focus()}
+                                        style={otpStyles.boxRow}
+                                    >
+                                        {Array.from({ length: 6 }).map((_, i) => {
+                                            const digit = otp[i] || '';
+                                            const isFocused = otp.length === i;
+                                            return (
+                                                <View
+                                                    key={i}
+                                                    style={[
+                                                        otpStyles.box,
+                                                        isFocused && otpStyles.boxFocused,
+                                                        digit ? otpStyles.boxFilled : null,
+                                                    ]}
+                                                >
+                                                    <Text style={[otpStyles.digit, !digit && otpStyles.placeholder]}>
+                                                        {digit || '0'}
+                                                    </Text>
+                                                </View>
+                                            );
+                                        })}
+                                    </Pressable>
+
+                                    {/* Resend */}
+                                    <TouchableOpacity
                                         onPress={handleResend}
                                         disabled={timer > 0 || isLoading}
-                                        className="items-center"
+                                        style={{ alignItems: 'center', marginTop: 24 }}
                                     >
-                                        <Text className={`font-medium ${timer > 0 ? 'text-text-secondary' : 'text-primary'}`}>
+                                        <Text style={{ fontWeight: '500', fontSize: 14, color: timer > 0 ? colors['text-secondary'] : colors.primary }}>
                                             {timer > 0 ? `Resend OTP in ${timer}s` : 'Resend OTP'}
                                         </Text>
                                     </TouchableOpacity>
@@ -313,3 +343,38 @@ export const LoginScreen = () => {
         </View>
     );
 };
+
+const otpStyles = StyleSheet.create({
+    boxRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 10,
+    },
+    box: {
+        width: 48,
+        height: 56,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        backgroundColor: 'white',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    boxFocused: {
+        borderColor: colors.teal,
+        borderWidth: 2,
+    },
+    boxFilled: {
+        borderColor: colors.primary,
+        backgroundColor: colors['green-light'],
+    },
+    digit: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: colors['text-primary'],
+    },
+    placeholder: {
+        color: '#D1D5DB',
+        fontWeight: '400',
+    },
+});

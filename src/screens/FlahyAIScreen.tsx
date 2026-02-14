@@ -306,6 +306,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const flatListRef = useRef<FlatList>(null);
+    const contentHeightRef = useRef(0);
+    const layoutHeightRef = useRef(0);
 
     // Merge: local greeting + store messages (with streaming overlay)
     const messages: Message[] = [
@@ -320,6 +322,27 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     // Report file data — attached to the first user message (same as web)
     const reportFileRef = useRef<ReportFile | null>(null);
+
+    const scrollToBottom = (animated = true) => {
+        const offset = contentHeightRef.current - layoutHeightRef.current;
+        if (offset > 0) {
+            flatListRef.current?.scrollToOffset({ offset, animated });
+        }
+    };
+
+    // Scroll to bottom after init
+    useEffect(() => {
+        if (!isInitializing && messages.length > 0) {
+            setTimeout(() => scrollToBottom(false), 400);
+        }
+    }, [isInitializing]);
+
+    // Scroll on new messages
+    useEffect(() => {
+        if (messages.length > 1) {
+            setTimeout(() => scrollToBottom(true), 150);
+        }
+    }, [messages.length]);
 
     // Initialize thread + load report on mount
     useEffect(() => {
@@ -359,11 +382,11 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
             reportFileRef.current = { base64, mediaType, filename: fileName };
 
-            // 3. Show greeting (local-only, not persisted)
+            // 3. Show generic greeting (report loaded silently in background)
             setGreetingMessage({
                 id: 'greeting',
                 role: 'assistant',
-                content: `Hello! I am FlahyAI. I've loaded your latest report (${fileName}). Ask me anything about it!`,
+                content: 'Hello! I am FlahyAI. How can I help you today?',
             });
         } catch (error: any) {
             console.error('Failed to load report:', error?.message);
@@ -554,9 +577,13 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             <Header showBack={true} onBack={() => navigation.goBack()} />
 
             {isInitializing ? (
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color={colors.primary} />
-                    <Text className="text-text-secondary text-sm mt-3">Loading FlahyAI...</Text>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
+                    <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors['green-light'], alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                        <Bot size={32} color={colors.primary} />
+                    </View>
+                    <Text style={{ fontSize: 24, fontWeight: '700', color: colors['text-primary'], marginBottom: 6 }}>FlahyAI</Text>
+                    <Text style={{ fontSize: 14, color: colors['text-secondary'], marginBottom: 24 }}>Your Personal Health AI</Text>
+                    <ActivityIndicator size="small" color={colors.primary} />
                 </View>
             ) : (
             <KeyboardAvoidingView
@@ -569,8 +596,21 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                         ref={flatListRef}
                         data={messages}
                         keyExtractor={item => item.id}
-                        contentContainerStyle={{ paddingTop: 20, paddingBottom: 100 }}
-                        onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: true })}
+                        contentContainerStyle={{ paddingTop: 12, paddingBottom: 120 }}
+                        onLayout={(e) => { layoutHeightRef.current = e.nativeEvent.layout.height; }}
+                        onContentSizeChange={(_, h) => {
+                            contentHeightRef.current = h;
+                            if (isLoading || streamingMessageId) {
+                                scrollToBottom(true);
+                            }
+                        }}
+                        keyboardShouldPersistTaps="handled"
+                        ListHeaderComponent={
+                            <View style={{ marginBottom: 20, paddingLeft: 40 }}>
+                                <Text style={{ fontSize: 22, fontWeight: '700', color: colors['text-primary'] }}>FlahyAI</Text>
+                                <Text style={{ fontSize: 14, color: colors['text-secondary'], marginTop: 4 }}>Your Personal Health AI</Text>
+                            </View>
+                        }
                         ListFooterComponent={
                             messages.length < 3 ? (
                                 <View className="mt-6">
