@@ -2,8 +2,9 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { CustomAlert } from '../components/CustomAlert';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { SignupForm } from '../components/SignupForm';
 import { RootStackParamList } from '../navigation/types';
@@ -61,6 +62,32 @@ export const LoginScreen = () => {
         return () => clearInterval(interval);
     }, [loginStep, timer]);
 
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertConfig({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        // If success in signup, switch mode after closing alert
+        if (alertConfig.type === 'success' && mode === 'signup') {
+            setMode('login');
+        }
+        // If success in login, navigate happens inside the function, but just in case
+    };
+
     const handleContinueLogin = async (otpOverride?: string) => {
         if (isLoading) return; 
         if (loginStep === 'input') {
@@ -72,12 +99,12 @@ export const LoginScreen = () => {
                 else if (email && !phoneNumber) method = 'email';
                 else if (phoneNumber && email) method = 'phone';
                 else {
-                    Alert.alert("Error", "Please enter a phone number or email address");
+                    showAlert("Error", "Please enter a phone number or email address", 'error');
                     return;
                 }
             } else {
-                if (method === 'phone' && !phoneNumber) { Alert.alert("Error", "Please enter a phone number"); return; }
-                if (method === 'email' && !email) { Alert.alert("Error", "Please enter an email address"); return; }
+                if (method === 'phone' && !phoneNumber) { showAlert("Error", "Please enter a phone number", 'error'); return; }
+                if (method === 'email' && !email) { showAlert("Error", "Please enter an email address", 'error'); return; }
             }
             
             setIsLoading(true);
@@ -90,14 +117,14 @@ export const LoginScreen = () => {
                 setLoginStep('otp');
                 setTimer(30);
             } catch (error: any) {
-                Alert.alert("Error", error.response?.data?.message || "Failed to send OTP");
+                showAlert("Error", error.response?.data?.message || "Failed to send OTP", 'error');
             } finally {
                 setIsLoading(false);
             }
         } else {
              // ... [Existing Login OTP Logic] ...
              const otpValue = otpOverride ?? otp;
-            if (!otpValue) { Alert.alert("Error", "Please enter OTP"); return; }
+            if (!otpValue) { showAlert("Error", "Please enter OTP", 'error'); return; }
 
             setIsLoading(true);
             try {
@@ -117,10 +144,10 @@ export const LoginScreen = () => {
                     setUser(response.data);
                     navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
                 } else {
-                     Alert.alert("Error", "Invalid response");
+                     showAlert("Error", "Invalid response", 'error');
                 }
             } catch (error: any) {
-                Alert.alert("Error", error.response?.data?.message || "Invalid OTP");
+                showAlert("Error", error.response?.data?.message || "Invalid OTP", 'error');
             } finally {
                 setIsLoading(false);
             }
@@ -145,7 +172,7 @@ export const LoginScreen = () => {
             
             // Validate Required Fields
             if (!payload.contact) {
-                Alert.alert("Validation Error", "Phone number is required.");
+                showAlert("Validation Error", "Phone number is required.", 'error');
                 setIsLoading(false);
                 return;
             }
@@ -161,10 +188,10 @@ export const LoginScreen = () => {
             console.log("Signup Response:", response);
 
             if (response?.status === 200 || response?.status === 201 || response?.success) {
-                Alert.alert("Success", "Account created successfully! Please log in.");
-                setMode('login');
+                showAlert("Success", "Account created successfully! Please log in.", 'success');
+                // setMode will happen in hideAlert
             } else {
-                Alert.alert("Registration Failed", response?.message || "Please check your details.");
+                showAlert("Registration Failed", response?.message || "Please check your details.", 'error');
             }
         } catch (error: any) {
             console.error("Signup Error Full:", JSON.stringify(error.response?.data, null, 2));
@@ -187,7 +214,7 @@ export const LoginScreen = () => {
                  displayMessage = error.message || "Unknown error";
             }
             
-            Alert.alert("Error", displayMessage);
+            showAlert("Error", displayMessage, 'error');
         } finally {
             setIsLoading(false);
         }
@@ -215,9 +242,9 @@ export const LoginScreen = () => {
             if (method === 'phone') await authService.sendOtp(phoneNumber, '+91', 2);
             else await authService.sendOtp(email, '', 1);
             setTimer(30);
-            Alert.alert("Success", "OTP resent successfully");
+            showAlert("Success", "OTP resent successfully", 'success');
         } catch (error: any) {
-             Alert.alert("Error", error.response?.data?.message || "Failed to resend OTP");
+             showAlert("Error", error.response?.data?.message || "Failed to resend OTP", 'error');
         } finally {
             setIsLoading(false);
         }
@@ -245,6 +272,13 @@ export const LoginScreen = () => {
                             isLoading={isLoading}
                         />
                     </View>
+                    <CustomAlert 
+                        visible={alertConfig.visible}
+                        title={alertConfig.title}
+                        message={alertConfig.message}
+                        type={alertConfig.type}
+                        onClose={hideAlert}
+                    />
                 </KeyboardAvoidingView>
             </ScreenWrapper>
         );
@@ -476,6 +510,13 @@ export const LoginScreen = () => {
                                 </TouchableOpacity>
                             )}
                         </ScrollView>
+                        <CustomAlert 
+                            visible={alertConfig.visible}
+                            title={alertConfig.title}
+                            message={alertConfig.message}
+                            type={alertConfig.type}
+                            onClose={hideAlert}
+                        />
                     </View>
             </View>
             </View>

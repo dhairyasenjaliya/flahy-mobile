@@ -1,6 +1,6 @@
 import { ArrowLeft, Calendar, ChevronDown } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { CustomInput } from '../components/CustomInput';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { TabSwitcher } from '../components/TabSwitcher';
@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 
 import { useNavigation } from '@react-navigation/native';
+import { CustomAlert } from '../components/CustomAlert';
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
 
@@ -56,6 +57,27 @@ export const SettingsScreen = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertConfig({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+    };
+
     useEffect(() => {
         fetchProfile();
     }, []);
@@ -65,9 +87,6 @@ export const SettingsScreen = () => {
         try {
             const data = await userService.getProfile();
             // Assuming data.user matches the structure, or adjust as needed
-            // The curl output showed: {"user": {"id":..., "first_name": "Dhairya", ...}} inside response.data
-            // The userService returns response.data directly.
-            
             const userData = data.user || data; 
             if (userData) {
                  setUser(userData); // Update store
@@ -84,7 +103,7 @@ export const SettingsScreen = () => {
             }
         } catch (error) {
             console.error("Failed to fetch profile", error);
-            Alert.alert("Error", "Failed to load profile data");
+            showAlert("Error", "Failed to load profile data", 'error');
         } finally {
             setIsLoading(false);
         }
@@ -92,8 +111,7 @@ export const SettingsScreen = () => {
 
     const handleLogout = () => {
         logout();
-        // Navigation reset is handled by RootNavigator now, but for safety:
-        // navigation.dispatch(CommonActions.reset({ index: 0, routes: [{ name: 'Login' }] }));
+        // Navigation reset is handled by RootNavigator now
     };
 
     return (
@@ -217,34 +235,37 @@ export const SettingsScreen = () => {
                                             ...(dobDate ? { date_of_birth: toISODate(dobDate) } : {}),
                                             ...(gender ? { gender: gender.toLowerCase() } : {}),
                                         });
-                                        Alert.alert("Success", "Profile updated successfully");
+                                        showAlert("Success", "Profile updated successfully", 'success');
                                         await fetchProfile(); // Refresh
                                     } else {
                                         if (!password || !confirmPassword) {
-                                            Alert.alert("Error", "Please fill all fields");
+                                            showAlert("Error", "Please fill all fields", 'error');
+                                            setIsLoading(false);
                                             return;
                                         }
                                         if (password !== confirmPassword) {
-                                            Alert.alert("Error", "Passwords do not match");
+                                            showAlert("Error", "Passwords do not match", 'error');
+                                            setIsLoading(false);
                                             return;
                                         }
                                         if (user?.password_created) {
                                             if (!currentPassword) {
-                                                Alert.alert("Error", "Please enter your current password");
+                                                showAlert("Error", "Please enter your current password", 'error');
+                                                setIsLoading(false);
                                                 return;
                                             }
                                             await userService.resetPassword(currentPassword, password, confirmPassword);
                                         } else {
                                             await userService.createPassword(password, confirmPassword);
                                         }
-                                        Alert.alert("Success", "Password updated successfully");
+                                        showAlert("Success", "Password updated successfully", 'success');
                                         setCurrentPassword("");
                                         setPassword("");
                                         setConfirmPassword("");
                                     }
                                 } catch (error: any) {
                                     console.error("Update failed", error);
-                                    Alert.alert("Error", error.response?.data?.message || "Failed to update settings");
+                                    showAlert("Error", error.response?.data?.message || "Failed to update settings", 'error');
                                 } finally {
                                     setIsLoading(false);
                                 }
@@ -378,6 +399,14 @@ export const SettingsScreen = () => {
                     </Pressable>
                 </Pressable>
             </Modal>
+
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={hideAlert}
+            />
         </ScreenWrapper>
     );
 };
