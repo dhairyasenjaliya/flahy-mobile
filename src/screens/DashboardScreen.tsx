@@ -4,7 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Calendar, Camera, CloudUpload, FileText, Package, Search, ShoppingBag, Sparkles, User, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Dimensions, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
 import { DataList } from '../components/DataList';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -16,6 +16,12 @@ import { colors } from '../theme/colors';
 
 const USER_AVATAR = "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=facearea&facepad=2.25&w=256&h=256&q=80";
 
+// Calculate consistent button size: 4 buttons + 3 gaps of 12px, inside 24px horizontal padding each side
+const SCREEN_W = Dimensions.get('window').width;
+const GRID_PADDING = 48; // 24px * 2
+const GRID_GAP = 12;
+const BTN_SIZE = Math.floor((SCREEN_W - GRID_PADDING - GRID_GAP * 3) / 4);
+
 export const DashboardScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [searchText, setSearchText] = useState("");
@@ -23,6 +29,7 @@ export const DashboardScreen = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const [isSupplementModalVisible, setIsSupplementModalVisible] = useState(false);
+    const [hasReport, setHasReport] = useState(false);
     const user = useAuthStore((state) => state.user);
 
     const fetchFiles = async () => {
@@ -56,6 +63,25 @@ export const DashboardScreen = () => {
 
     useEffect(() => {
         fetchFiles();
+        checkReport();
+    }, []);
+
+    const checkReport = async () => {
+        try {
+            const response = await userService.getReports();
+            console.log("🚀 ~ checkReport ~ response:", response)
+            // Response may be { data: [...] } or array directly
+            const list = Array.isArray(response) ? response : (response?.data || []);
+            setHasReport(list.length > 0);
+        } catch (error) {
+            // If API fails, don't show button
+            setHasReport(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFiles();
+        checkReport();
     }, []);
 
     const handleDownloadReport = () => {
@@ -360,23 +386,27 @@ export const DashboardScreen = () => {
                 {/* Action Hero Section */}
                 <View className="bg-[#E2F1E6] rounded-t-[40px] px-6 pt-8 pb-10 -mb-10 min-h-[500px]">
 
-                    {/* Schedule Pick-up Button */}
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('SchedulePickup')}
-                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
-                    >
-                        <Calendar size={20} color="white" />
-                        <Text className="text-white font-semibold text-base ml-2">Schedule Pick-up</Text>
-                    </TouchableOpacity>
+                    {/* Schedule Pick-up Button - Only show if user can schedule */}
+                    {user?.can_schedule_appointment !== false && (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('SchedulePickup')}
+                            className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
+                        >
+                            <Calendar size={20} color="white" />
+                            <Text className="text-white font-semibold text-base ml-2">Schedule Pick-up</Text>
+                        </TouchableOpacity>
+                    )}
 
-                    {/* Download Report Button */}
-                    <TouchableOpacity
-                        onPress={handleDownloadReport}
-                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
-                    >
-                        <FileText size={20} color="white" />
-                        <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
-                    </TouchableOpacity>
+                    {/* Download Report Button — only shown when user has a report */}
+                    {hasReport && (
+                        <TouchableOpacity
+                            onPress={handleDownloadReport}
+                            className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-4 shadow-sm active:opacity-90"
+                        >
+                            <FileText size={20} color="white" />
+                            <Text className="text-white font-semibold text-base ml-2">Download Your Flahy Report</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {/* Products Button */}
                     <TouchableOpacity
@@ -388,42 +418,42 @@ export const DashboardScreen = () => {
                     </TouchableOpacity>
 
                     {/* Action Grid */}
-                    <View className="flex-row justify-between gap-4 mb-8">
+                    <View style={{ flexDirection: 'row', gap: GRID_GAP, marginBottom: 32 }}>
                         {/* FlahyAI */}
                         <TouchableOpacity
                             onPress={handleFlahyAI}
-                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
                         >
                             <Sparkles size={28} color="white" />
-                            <Text className="text-white font-medium text-sm mt-2">FlahyAI</Text>
+                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>FlahyAI</Text>
                         </TouchableOpacity>
 
                         {/* Upload */}
                         <TouchableOpacity
                             onPress={handleUpload}
                             disabled={isUploading}
-                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
                         >
                             {isUploading ? <ActivityIndicator color="white" /> : <CloudUpload size={28} color="white" />}
-                            <Text className="text-white font-medium text-sm mt-2">Upload</Text>
+                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Upload</Text>
                         </TouchableOpacity>
 
                         {/* Camera */}
                         <TouchableOpacity
                             onPress={handleCamera}
-                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
                         >
                             <Camera size={28} color="white" />
-                            <Text className="text-white font-medium text-sm mt-2">Camera</Text>
+                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Camera</Text>
                         </TouchableOpacity>
 
                         {/* Supplements (Intake Modal) */}
                         <TouchableOpacity
                             onPress={() => setIsSupplementModalVisible(true)}
-                            className="flex-1 aspect-square bg-teal rounded-xl items-center justify-center shadow-sm active:opacity-90"
+                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
                         >
                             <ShoppingBag size={28} color="white" />
-                            <Text className="text-white font-medium text-sm mt-2">Supplements</Text>
+                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Supplements</Text>
                         </TouchableOpacity>
                     </View>
 

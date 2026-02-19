@@ -2,7 +2,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ArrowLeft } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, ImageBackground, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { CustomAlert } from '../components/CustomAlert';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -33,6 +33,13 @@ const KeyboardWrapper = ({ children }: { children: React.ReactNode }) => {
     );
 };
 
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+// 32px horizontal padding on each side (px-8), so available width = SCREEN_WIDTH - 64
+// 6 boxes + 5 gaps between them
+const OTP_H_PADDING = 64; // 32px * 2
+const OTP_GAP = 8;
+const OTP_BOX_SIZE = Math.floor((SCREEN_WIDTH - OTP_H_PADDING - OTP_GAP * 5) / 6);
+
 export const LoginScreen = () => {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const route = useRoute<RouteProp<RootStackParamList, 'Login'>>(); // Get route params
@@ -52,6 +59,15 @@ export const LoginScreen = () => {
     const setToken = useAuthStore((state) => state.setToken);
     const setUser = useAuthStore((state) => state.setUser);
     const otpInputRef = useRef<TextInput>(null);
+
+    // Auto-focus OTP input when entering OTP step (without using autoFocus prop)
+    // This avoids the Android bug where autoFocus kills keyboard re-open
+    useEffect(() => {
+        if (loginStep === 'otp') {
+            const t = setTimeout(() => otpInputRef.current?.focus(), 150);
+            return () => clearTimeout(t);
+        }
+    }, [loginStep]);
 
     // Timer logic
     useEffect(() => {
@@ -81,11 +97,6 @@ export const LoginScreen = () => {
 
     const hideAlert = () => {
         setAlertConfig(prev => ({ ...prev, visible: false }));
-        // If success in signup, switch mode after closing alert
-        if (alertConfig.type === 'success' && mode === 'signup') {
-            setMode('login');
-        }
-        // If success in login, navigate happens inside the function, but just in case
     };
 
     const handleContinueLogin = async (otpOverride?: string) => {
@@ -187,9 +198,17 @@ export const LoginScreen = () => {
             const response = await authService.registerUser(payload);
             console.log("Signup Response:", response);
 
-            if (response?.status === 200 || response?.status === 201 || response?.success) {
-                showAlert("Success", "Account created successfully! Please log in.", 'success');
-                // setMode will happen in hideAlert
+            if (response?.status === 200 || response?.status === 201 || response?.success || response?.token) {
+                // If API returns a token, log user in directly and go to Dashboard
+                if (response?.token) {
+                    setToken(response.token);
+                    setUser(response.data || response.user);
+                    navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
+                } else {
+                    // No token returned — ask user to log in
+                    showAlert("Success", "Account created! Please log in.", 'success');
+                    setMode('login');
+                }
             } else {
                 showAlert("Registration Failed", response?.message || "Please check your details.", 'error');
             }
@@ -255,8 +274,8 @@ export const LoginScreen = () => {
             <ScreenWrapper>
                 <KeyboardAvoidingView 
                     behavior={Platform.OS === "ios" ? "padding" : "height"}
-                    className="flex-1"
-                >
+                    className="flex-1 bg-[#FFFFF0]"
+                 >
                     <View className="flex-1 px-4">
                         <View className="flex-row items-center mb-2 mt-2 ml-1">
                             <TouchableOpacity 
@@ -452,13 +471,16 @@ export const LoginScreen = () => {
                                             returnKeyType="done"
                                             onSubmitEditing={() => handleContinueLogin()}
                                             maxLength={6}
-                                            autoFocus
+                                            showSoftInputOnFocus
+                                            caretHidden
                                             style={{ position: 'absolute', opacity: 0, height: 0, width: 0 }}
                                         />
 
-                                        {/* Visual OTP boxes */}
+                                        {/* Visual OTP boxes — tap anywhere to re-focus keyboard */}
                                         <Pressable
-                                            onPress={() => otpInputRef.current?.focus()}
+                                            onPress={() => {
+                                                otpInputRef.current?.focus();
+                                            }}
                                             style={otpStyles.boxRow}
                                         >
                                             {Array.from({ length: 6 }).map((_, i) => {
@@ -528,11 +550,11 @@ const otpStyles = StyleSheet.create({
     boxRow: {
         flexDirection: 'row',
         justifyContent: 'center',
-        gap: 10,
+        gap: OTP_GAP,
     },
     box: {
-        width: 48,
-        height: 56,
+        width: OTP_BOX_SIZE,
+        height: OTP_BOX_SIZE,
         borderRadius: 12,
         borderWidth: 1.5,
         borderColor: '#E5E7EB',
@@ -549,7 +571,7 @@ const otpStyles = StyleSheet.create({
         backgroundColor: colors['green-light'],
     },
     digit: {
-        fontSize: 24,
+        fontSize: Math.floor(OTP_BOX_SIZE * 0.45),
         fontWeight: '700',
         color: colors['text-primary'],
     },

@@ -44,5 +44,10 @@ export const userService = {
   resetPassword: async (current_password: string, new_password: string, confirm_password: string) => {
     const response = await api.post('/api/user/reset-password', { current_password, new_password, confirm_password });
     return response.data;
+  },
+
+  schedulePickup: async (date: string, time: string, address: string) => {
+    const response = await api.post('/appointment-scheduling', { date, time, address });
+    return response.data;
   }
 };

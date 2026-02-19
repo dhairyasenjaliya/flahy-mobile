@@ -1,9 +1,14 @@
 import { useNavigation } from '@react-navigation/native';
-import { ArrowLeft } from 'lucide-react-native';
+import { ArrowLeft, Clock } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Calendar, DateData, LocaleConfig } from 'react-native-calendars';
+import DatePicker from 'react-native-date-picker';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+import { CustomAlert } from '../components/CustomAlert';
 import { ScreenWrapper } from '../components/ScreenWrapper';
+import { userService } from '../services/userService';
+import { useAuthStore } from '../store/authStore';
 
 // Configure locale if needed (optional, keeping default for now)
 LocaleConfig.locales['en'] = {
@@ -21,24 +26,87 @@ LocaleConfig.defaultLocale = 'en';
 export const SchedulePickupScreen = () => {
     const navigation = useNavigation();
     const [selectedDate, setSelectedDate] = useState('');
+    const [time, setTime] = useState('');
+    const [address, setAddress] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    const [date, setDate] = useState(new Date());
+    const [open, setOpen] = useState(false);
+
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertConfig({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+        // If success, go back after closing alert
+        if (alertConfig.type === 'success') {
+            navigation.goBack();
+        }
+    };
 
     const onDayPress = (day: DateData) => {
         setSelectedDate(day.dateString);
     };
 
-    const handleConfirm = () => {
-        if (!selectedDate) {
-            Alert.alert("Select Date", "Please select a date for pickup.");
+    const handleConfirm = async () => {
+        if (!selectedDate || !time.trim() || !address.trim()) {
+            showAlert("Missing Details", "Please fill in all fields (Date, Time, Address).", 'error');
             return;
         }
-        Alert.alert("Pickup Scheduled", `Pickup scheduled for ${selectedDate}. Our team will contact you shortly.`);
-        navigation.goBack();
+        
+        setIsLoading(true);
+        try {
+            await userService.schedulePickup(selectedDate, time, address);
+            
+            // Refetch profile to get updated status from server
+            try {
+                const profileResponse = await userService.getProfile();
+                const freshUser = profileResponse.data || profileResponse;
+                if (freshUser && freshUser.id) {
+                    useAuthStore.getState().setUser(freshUser);
+                }
+            } catch (err) {
+                console.error("Failed to refresh profile after scheduling", err);
+                 // Fallback: update locally if fetch fails
+                 const user = useAuthStore.getState().user;
+                 if (user) {
+                     useAuthStore.getState().setUser({ ...user, can_schedule_appointment: false });
+                 }
+            }
+
+            showAlert("Pickup Scheduled", `Pickup scheduled for ${selectedDate} at ${time}. Our team will contact you shortly.`, 'success');
+        } catch (error: any) {
+            console.error("Pickup scheduling failed", error);
+            showAlert("Error", error.response?.data?.message || "Failed to schedule pickup. Please try again.", 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const today = new Date().toISOString().split('T')[0];
 
     return (
         <ScreenWrapper className="flex-1 bg-[#FFFBE6]">
+            <KeyboardAwareScrollView 
+                contentContainerStyle={{ flexGrow: 1 }}
+                enableOnAndroid={true}
+                extraScrollHeight={20}
+                showsVerticalScrollIndicator={false}
+            >
                 {/* Header */}
                 <View className="flex-row items-center px-6 py-4">
                     <TouchableOpacity 
@@ -51,7 +119,7 @@ export const SchedulePickupScreen = () => {
                 </View>
 
                 {/* Content */}
-                <View className="flex-1 px-6 pt-4">
+                <View className="flex-1 px-6 pt-4 pb-10">
                     <Text className="text-base text-gray-600 mb-6 text-center">
                         Please select a preferred date for your sample pickup.
                     </Text>
@@ -110,18 +178,76 @@ export const SchedulePickupScreen = () => {
                         />
                     </View>
 
+                    {/* Time Input (Native Picker) */}
+                    <View className="mt-8 mb-4">
+                        <Text className="text-gray-700 font-medium mb-2">Preferred Time</Text>
+                        <TouchableOpacity 
+                            onPress={() => setOpen(true)}
+                            className="bg-white p-4 rounded-xl shadow-sm flex-row items-center justify-between"
+                        >
+                            <Text className={time ? "text-[#2F2F2F]" : "text-[#9CA3AF]"}>
+                                {time || "e.g. 10:00 AM"}
+                            </Text>
+                            <Clock size={20} color="#6B7280" />
+                        </TouchableOpacity>
+                        
+                        <DatePicker
+                            modal
+                            open={open}
+                            date={date}
+                            mode="time"
+                            onConfirm={(date) => {
+                                setOpen(false)
+                                setDate(date)
+                                // Format to HH:mm A
+                                const formatted = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                setTime(formatted)
+                            }}
+                            onCancel={() => {
+                                setOpen(false)
+                            }}
+                        />
+                    </View>
+
+                    {/* Address Input */}
+                    <View className="mb-6">
+                        <Text className="text-gray-700 font-medium mb-2">Pickup Address</Text>
+                        <TextInput
+                            className="bg-white p-4 rounded-xl text-[#2F2F2F] shadow-sm min-h-[100px]"
+                            placeholder="Enter full address"
+                            placeholderTextColor="#9CA3AF"
+                            multiline
+                            textAlignVertical="top"
+                            value={address}
+                            onChangeText={setAddress}
+                        />
+                    </View>
+
                     {/* Action Button */}
-                    <View className="mt-8">
+                    <View className="mt-2 mb-10">
                          <TouchableOpacity
                             onPress={handleConfirm}
-                            className={`w-full py-4 rounded-xl items-center shadow-sm ${selectedDate ? 'bg-[#4FB5B0]' : 'bg-gray-300'}`}
-                            disabled={!selectedDate}
+                            className={`w-full py-4 rounded-xl items-center shadow-sm ${selectedDate && time && address && !isLoading ? 'bg-[#4FB5B0]' : 'bg-gray-300'}`}
+                            disabled={!selectedDate || !time || !address || isLoading}
                         >
-                            <Text className="text-white text-lg font-bold">Confirm Pickup Date</Text>
+                            {isLoading ? (
+                                <ActivityIndicator color="white" />
+                            ) : (
+                                <Text className="text-white text-lg font-bold">Confirm Pickup</Text>
+                            )}
                         </TouchableOpacity>
                     </View>
 
+                    <CustomAlert 
+                        visible={alertConfig.visible}
+                        title={alertConfig.title}
+                        message={alertConfig.message}
+                        type={alertConfig.type}
+                        onClose={hideAlert}
+                    />
+
                 </View>
+            </KeyboardAwareScrollView>
         </ScreenWrapper>
     );
 };

@@ -1,5 +1,5 @@
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Bot, FileText, Send, Sparkles, Zap } from 'lucide-react-native';
+import { Bot, FileText, Send, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -41,7 +41,7 @@ type Message = {
 
 const SUGGESTIONS = [
     { id: '1', text: "Analyze my latest report", icon: FileText },
-    { id: '2', text: "What's in my recent uploads?", icon: Zap },
+    // { id: '2', text: "What's in my recent uploads?", icon: Zap },
 ];
 
 // ---------------------------------------------------------------------------
