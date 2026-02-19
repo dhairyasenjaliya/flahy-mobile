@@ -53,6 +53,7 @@ export const SupplementScreen = () => {
     };
 
     const renderProduct = ({ item }: { item: Product }) => {
+        console.log("🚀 ~ renderProduct ~ item:", item)
         // Format price
         const priceDisplay = item.amount 
             ? `Price:    ₹${(item.amount / 100).toLocaleString()}` // Assuming amount is in lowest denomination (e.g. paise) if from Stripe/Razorpay, 
@@ -84,14 +85,17 @@ export const SupplementScreen = () => {
                 <View className="p-5 pt-4">
                     <Text className="text-text-primary font-bold text-xl mb-2">{item.name}</Text>
                     
-                    <Text className="text-text-secondary text-sm leading-5 mb-4 text-[#666666]">
+                    {/* <Text className="text-text-secondary text-sm leading-5 mb-4 text-[#666666]">
                         {item.description || "No description available."}
                         <Text className="text-[#4FB5B0] font-medium underline"> Read more</Text>
-                    </Text>
+                    </Text> */}
 
-                    <Text className="text-text-primary font-bold text-base mb-6">
-                        {item.amount ? `Price:    ₹${(item.amount / 100).toLocaleString()}` : 'Price: --'}
-                         <Text className="font-normal text-xs text-text-secondary"> (excl. of taxes)</Text>
+                    <Text className="text-text-primary font-bold text-xl mb-6">
+                        {item.product_amount 
+                            ? `₹${(parseFloat(item.product_amount) / 100).toLocaleString()}` 
+                            : (item.amount ? `₹${(item.amount / 100).toLocaleString()}` : '₹ --')
+                        }
+                         {/* <Text className="font-normal text-xs text-text-secondary"> (incl. of taxes)</Text> */}
                     </Text>
                     
                     <TouchableOpacity 
