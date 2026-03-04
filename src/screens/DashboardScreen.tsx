@@ -6,6 +6,7 @@ import { Calendar, Camera, CloudUpload, FileText, Package, Search, ShoppingBag, 
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Dimensions, Image, PermissionsAndroid, Platform, RefreshControl, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
+import { CustomAlert } from '../components/CustomAlert';
 import { DataList } from '../components/DataList';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { SupplementIntakeModal } from '../components/SupplementIntakeModal';
@@ -31,6 +32,27 @@ export const DashboardScreen = () => {
     const [isSupplementModalVisible, setIsSupplementModalVisible] = useState(false);
     const [hasReport, setHasReport] = useState(false);
     const user = useAuthStore((state) => state.user);
+
+    // Custom Alert State
+    const [alertConfig, setAlertConfig] = useState<{
+        visible: boolean;
+        title: string;
+        message: string;
+        type: 'success' | 'error' | 'info';
+    }>({
+        visible: false,
+        title: '',
+        message: '',
+        type: 'info',
+    });
+
+    const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        setAlertConfig({ visible: true, title, message, type });
+    };
+
+    const hideAlert = () => {
+        setAlertConfig(prev => ({ ...prev, visible: false }));
+    };
 
     const fetchFiles = async () => {
         setIsLoading(true);
@@ -481,11 +503,17 @@ export const DashboardScreen = () => {
             <SupplementIntakeModal
                 visible={isSupplementModalVisible}
                 onClose={() => setIsSupplementModalVisible(false)}
-                onSubmit={(data: { name: string; dob: string; phone: string }) => {
-                    // Here you would typically send this data to the backend
-                    setIsSupplementModalVisible(false);
-                    navigation.navigate('Supplements');
+                onSubmit={({ name, dob, phone, message }) => {
+                    showAlert("Success", message, 'success');
                 }}
+            />
+            
+            <CustomAlert 
+                visible={alertConfig.visible}
+                title={alertConfig.title}
+                message={alertConfig.message}
+                type={alertConfig.type}
+                onClose={hideAlert}
             />
         </ScreenWrapper>
     );

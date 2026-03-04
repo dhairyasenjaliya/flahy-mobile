@@ -49,5 +49,11 @@ export const userService = {
   schedulePickup: async (date: string, time: string, address: string) => {
     const response = await api.post('/appointment-scheduling', { date, time, address });
     return response.data;
+  },
+
+  requestSupplement: async (data: { name: string; dob: string; phone: string }) => {
+    const response = await api.post('/supplement-request', data);
+    return response.data;
   }
 };
+

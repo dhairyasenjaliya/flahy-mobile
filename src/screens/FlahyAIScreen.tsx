@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Keyboard,
     KeyboardAvoidingView,
     Linking,
     Platform,
@@ -305,6 +306,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
     const flatListRef = useRef<FlatList>(null);
     const contentHeightRef = useRef(0);
     const layoutHeightRef = useRef(0);
@@ -343,6 +345,18 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             setTimeout(() => scrollToBottom(true), 150);
         }
     }, [messages.length]);
+
+    // Android: track keyboard height manually
+    useEffect(() => {
+        if (Platform.OS !== 'android') return;
+        const showSub = Keyboard.addListener('keyboardDidShow', (e) => {
+            setKeyboardHeight(e.endCoordinates.height+25);
+        });
+        const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardHeight(0);
+        });
+        return () => { showSub.remove(); hideSub.remove(); };
+    }, []);
 
     // Initialize thread + load report on mount
     useEffect(() => {
@@ -573,7 +587,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
     };
 
     return (
-        <ScreenWrapper className="flex-1 bg-background" edges={['top', 'bottom']}>
+        <ScreenWrapper className="flex-1 bg-background" edges={Platform.OS === 'android' ? ['top'] : ['top', 'bottom']}>
             <Header 
                 showBack={true} 
                 onBack={() => navigation.goBack()} 
@@ -594,7 +608,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 10 : 0}
-                className="flex-1"
+                style={{ flex: 1 }}
             >
                 <View className="flex-1 px-4">
                     <FlatList
@@ -679,7 +693,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
                 {/* Floating Input Area — uses style (not className) to avoid
                     NativeWind re-processing on every keystroke */}
-                <View style={inputStyles.wrapper}>
+                <View style={[inputStyles.wrapper, keyboardHeight > 0 && { paddingBottom: keyboardHeight }]}>
                     <View style={inputStyles.bar}>
                         <View style={inputStyles.iconCircle}>
                             <Sparkles size={20} color={colors['text-secondary']} />
@@ -692,7 +706,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                                 placeholder="Message FlahyAI..."
                                 placeholderTextColor={colors['text-secondary']}
                                 style={inputStyles.textInput}
-                                textAlignVertical="top"
+                                textAlignVertical="center"
                                 multiline
                             />
                         </View>

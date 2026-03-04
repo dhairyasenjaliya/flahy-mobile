@@ -27,7 +27,10 @@ function formatDate(date: Date): string {
 }
 
 function toISODate(date: Date): string {
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 export const SettingsScreen = () => {
@@ -95,9 +98,18 @@ export const SettingsScreen = () => {
                  setEmail(userData.email || "");
                  setPhone(userData.contact || "");
                  if (userData.date_of_birth) {
-                     const d = new Date(userData.date_of_birth);
-                     setDobDate(d);
-                     setDob(formatDate(d));
+                     // Ensure we parse "YYYY-MM-DD" strictly in local time to avoid timezone offset shifts
+                     const dateStr = userData.date_of_birth.split('T')[0];
+                     if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                         const [y, m, d] = dateStr.split('-');
+                         const localDate = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+                         setDobDate(localDate);
+                         setDob(formatDate(localDate));
+                     } else {
+                         const d = new Date(userData.date_of_birth);
+                         setDobDate(d);
+                         setDob(formatDate(d));
+                     }
                  }
                  setGender(userData.gender || "");
             }
