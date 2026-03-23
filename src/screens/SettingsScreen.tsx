@@ -1,6 +1,7 @@
-import { ArrowLeft, Calendar, ChevronDown } from 'lucide-react-native';
+import { ArrowLeft, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import WebView from 'react-native-webview';
 import { CustomInput } from '../components/CustomInput';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { TabSwitcher } from '../components/TabSwitcher';
@@ -60,6 +61,10 @@ export const SettingsScreen = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
 
+    // Legal Modal State
+    const [legalModalUrl, setLegalModalUrl] = useState<string | null>(null);
+    const [legalModalTitle, setLegalModalTitle] = useState('');
+
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{
         visible: boolean;
@@ -89,6 +94,7 @@ export const SettingsScreen = () => {
         setIsLoading(true);
         try {
             const data = await userService.getProfile();
+            console.log("🚀 ~ fetchProfile ~ data:", data)
             // Assuming data.user matches the structure, or adjust as needed
             const userData = data.user || data; 
             if (userData) {
@@ -289,7 +295,25 @@ export const SettingsScreen = () => {
                             </Text>
                         </TouchableOpacity>
                         
-                        <TouchableOpacity 
+                        {/* Legal Links */}
+                        <View style={{ marginTop: 24, gap: 12 }}>
+                            <TouchableOpacity
+                                onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy'); }}
+                                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}
+                            >
+                                <Text style={{ fontSize: 15, fontWeight: '500', color: colors['text-primary'] }}>Privacy Policy</Text>
+                                <ChevronRight size={18} color={colors['text-secondary']} />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={() => { setLegalModalTitle('Terms & Conditions'); setLegalModalUrl('https://flahyhealth.com/terms-condition'); }}
+                                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}
+                            >
+                                <Text style={{ fontSize: 15, fontWeight: '500', color: colors['text-primary'] }}>Terms & Conditions</Text>
+                                <ChevronRight size={18} color={colors['text-secondary']} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <TouchableOpacity
                             onPress={handleLogout}
                             style={{ marginTop: 16, backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2', marginBottom: 80 }}
                         >
@@ -412,7 +436,31 @@ export const SettingsScreen = () => {
                 </Pressable>
             </Modal>
 
-            <CustomAlert 
+            {/* Legal Document Modal */}
+            <Modal visible={!!legalModalUrl} animationType="slide" presentationStyle="pageSheet">
+                <View style={{ flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'ios' ? 56 : 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                        <Text style={{ fontSize: 17, fontWeight: '600', color: colors['text-primary'] }}>{legalModalTitle}</Text>
+                        <TouchableOpacity onPress={() => setLegalModalUrl(null)} style={{ padding: 4 }}>
+                            <X size={24} color={colors['text-secondary']} />
+                        </TouchableOpacity>
+                    </View>
+                    {legalModalUrl && (
+                        <WebView
+                            source={{ uri: legalModalUrl }}
+                            style={{ flex: 1 }}
+                            startInLoadingState
+                            renderLoading={() => (
+                                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                                    <ActivityIndicator size="large" color={colors.primary} />
+                                </View>
+                            )}
+                        />
+                    )}
+                </View>
+            </Modal>
+
+            <CustomAlert
                 visible={alertConfig.visible}
                 title={alertConfig.title}
                 message={alertConfig.message}

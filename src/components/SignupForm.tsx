@@ -1,7 +1,8 @@
-import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react-native';
+import { Calendar as CalendarIcon, ChevronDown, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import DatePicker from 'react-native-date-picker';
+import WebView from 'react-native-webview';
 
 interface SignupData {
     firstName: string;
@@ -35,6 +36,8 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
     const [date, setDate] = useState(new Date());
     const [open, setOpen] = useState(false);
     const [showGenderPicker, setShowGenderPicker] = useState(false);
+    const [legalModalUrl, setLegalModalUrl] = useState<string | null>(null);
+    const [legalModalTitle, setLegalModalTitle] = useState('');
 
     const handleContinue = () => {
         onSubmit({
@@ -185,8 +188,27 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                     )}
                 </View>
 
-                {/* Terms */}
-                <TouchableOpacity 
+                {/* View Terms & Privacy Policy */}
+                <View className="mt-2 gap-2">
+                    <Text className="text-text-primary font-medium ml-1 text-sm">Review before signing up:</Text>
+                    <View className="flex-row gap-3">
+                        <TouchableOpacity
+                            onPress={() => { setLegalModalTitle('Terms & Conditions'); setLegalModalUrl('https://flahyhealth.com/terms-condition'); }}
+                            className="flex-1 bg-white border border-gray-300 rounded-xl py-3 items-center"
+                        >
+                            <Text className="text-primary font-semibold text-sm">Terms & Conditions</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy'); }}
+                            className="flex-1 bg-white border border-gray-300 rounded-xl py-3 items-center"
+                        >
+                            <Text className="text-primary font-semibold text-sm">Privacy Policy</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Terms Checkbox */}
+                <TouchableOpacity
                     className="flex-row items-center mt-2"
                     onPress={() => setTermsAccepted(!termsAccepted)}
                 >
@@ -194,7 +216,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                         {termsAccepted && <Text className="text-white text-xs">✓</Text>}
                     </View>
                     <Text className="text-text-secondary text-xs flex-1">
-                        I accept all the <Text className="font-bold text-text-primary">Term & Conditions</Text> and <Text className="font-bold text-text-primary">Privacy Policy</Text>.
+                        I have read and accept the Terms & Conditions and Privacy Policy.
                     </Text>
                 </TouchableOpacity>
 
@@ -216,6 +238,30 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                      <Text className="text-text-secondary">Already have an account? <Text className="text-teal font-medium">Log in</Text></Text>
                  </TouchableOpacity> */}
             </View>
+
+            {/* Legal Document Modal */}
+            <Modal visible={!!legalModalUrl} animationType="slide" presentationStyle="pageSheet">
+                <View style={{ flex: 1, backgroundColor: 'white', paddingTop: Platform.OS === 'ios' ? 56 : 16 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                        <Text style={{ fontSize: 17, fontWeight: '600', color: '#1B2C3F' }}>{legalModalTitle}</Text>
+                        <TouchableOpacity onPress={() => setLegalModalUrl(null)} style={{ padding: 4 }}>
+                            <X size={24} color="#6C7074" />
+                        </TouchableOpacity>
+                    </View>
+                    {legalModalUrl && (
+                        <WebView
+                            source={{ uri: legalModalUrl }}
+                            style={{ flex: 1 }}
+                            startInLoadingState
+                            renderLoading={() => (
+                                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                                    <ActivityIndicator size="large" color="#70A263" />
+                                </View>
+                            )}
+                        />
+                    )}
+                </View>
+            </Modal>
         </ScrollView>
     );
 };

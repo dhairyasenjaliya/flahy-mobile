@@ -31,7 +31,10 @@ export const DashboardScreen = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isSupplementModalVisible, setIsSupplementModalVisible] = useState(false);
     const [hasReport, setHasReport] = useState(false);
-    const user = useAuthStore((state) => state.user);
+    const user = useAuthStore((state) => {
+        console.log("🚀 ~ DashboardScreen ~ user:", user)
+        return state.user;
+    });
 
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{

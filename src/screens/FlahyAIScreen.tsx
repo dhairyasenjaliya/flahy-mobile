@@ -1,5 +1,6 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Bot, FileText, Send, Sparkles } from 'lucide-react-native';
+import { Bot, FileText, Send, Shield, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
@@ -7,12 +8,14 @@ import {
     Keyboard,
     KeyboardAvoidingView,
     Linking,
+    Modal,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Header } from '../components/Header';
@@ -289,7 +292,27 @@ function getMimeType(fileName: string): string {
     return 'image/jpeg';
 }
 
+const AI_CONSENT_KEY = 'flahy_ai_consent_accepted';
+
 export const FlahyAIScreen = ({ navigation }: Props) => {
+    // ---- AI Data Consent ----
+    const [hasAIConsent, setHasAIConsent] = useState<boolean | null>(null); // null = loading
+
+    useEffect(() => {
+        AsyncStorage.getItem(AI_CONSENT_KEY).then(val => {
+            setHasAIConsent(false);
+        });
+    }, []);
+
+    const handleAcceptAIConsent = async () => {
+        await AsyncStorage.setItem(AI_CONSENT_KEY, 'true');
+        setHasAIConsent(true);
+    };
+
+    const handleDeclineAIConsent = () => {
+        navigation.goBack();
+    };
+
     // ---- Store-backed state ----
     const storeMessages = useChatStore(s => {
         const thread = s.threads.find(t => t.id === s.currentThreadId);
@@ -586,11 +609,115 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
         }
     };
 
+    // Show loading while checking consent
+    if (hasAIConsent === null) {
+        return (
+            <ScreenWrapper className="flex-1 bg-background" edges={Platform.OS === 'android' ? ['top'] : ['top', 'bottom']}>
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                </View>
+            </ScreenWrapper>
+        );
+    }
+
     return (
         <ScreenWrapper className="flex-1 bg-background" edges={Platform.OS === 'android' ? ['top'] : ['top', 'bottom']}>
-            <Header 
-                showBack={true} 
-                onBack={() => navigation.goBack()} 
+            {/* AI Data Consent Modal */}
+            <Modal visible={!hasAIConsent} animationType="slide" transparent={false}>
+                <View style={{ flex: 1, backgroundColor: colors.background }}>
+                    <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, paddingTop: Platform.OS === 'ios' ? 60 : 40 }}>
+                        <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: colors['green-light'], alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                                <Shield size={30} color={colors.primary} />
+                            </View>
+                            <Text style={{ fontSize: 22, fontWeight: '700', color: colors['text-primary'], textAlign: 'center', marginBottom: 8 }}>
+                                FlahyAI Data Consent
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 20 }}>
+                                Before using FlahyAI, please review how your data is used.
+                            </Text>
+                        </View>
+
+                        {/* What data is shared */}
+                        <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
+                                What data is shared
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                {'\u2022'} Your health or medical data (such as diagnostic reports, biomarkers, and related insights)
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                {'\u2022'} Your queries, inputs, and interactions with FlahyAI
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
+                                {'\u2022'} Contextual information necessary to generate relevant responses
+                            </Text>
+                        </View>
+
+                        {/* Who receives it */}
+                        <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
+                                Who receives your data
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
+                                Your data is processed by OpenAI (or its affiliated entities), a trusted third-party AI service provider, solely to generate responses and provide health-related insights within FlahyAI.
+                            </Text>
+                        </View>
+
+                        {/* Purpose */}
+                        <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
+                                Purpose of sharing
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                {'\u2022'} Generating responses to your queries
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                {'\u2022'} Helping you understand your reports
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
+                                {'\u2022'} Providing health-related insights and recommendations
+                            </Text>
+                        </View>
+
+                        {/* Safeguards */}
+                        <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 20, marginBottom: 24, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                            <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
+                                Data protection
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
+                                Our AI service providers are contractually obligated to maintain confidentiality, use data only for providing services to Flahy, and implement appropriate security measures consistent with applicable laws.
+                            </Text>
+                        </View>
+
+                        <Text style={{ fontSize: 13, color: colors['text-secondary'], textAlign: 'center', marginBottom: 20, lineHeight: 18 }}>
+                            You can choose not to use FlahyAI at any time. For more details, read our{' '}
+                            <Text style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://flahyhealth.com/privacy-policy')}>
+                                Privacy Policy
+                            </Text>.
+                        </Text>
+
+                        {/* Action Buttons */}
+                        <TouchableOpacity
+                            onPress={handleAcceptAIConsent}
+                            style={{ backgroundColor: colors.primary, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12, shadowColor: colors.primary, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4, elevation: 4 }}
+                        >
+                            <Text style={{ color: 'white', fontWeight: '600', fontSize: 17 }}>I Agree & Continue</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={handleDeclineAIConsent}
+                            style={{ height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 40 }}
+                        >
+                            <Text style={{ color: colors['text-secondary'], fontWeight: '500', fontSize: 16 }}>Decline & Go Back</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </Modal>
+
+            <Header
+                showBack={true}
+                onBack={() => navigation.goBack()}
                 title="FlahyAI"
                 subtitle="Your Personal Health AI"
             />

@@ -27,7 +27,7 @@ export const authService = {
     const response = await api.post('/api/user/register-user', {
         ...userData,
         user_type: 'user',
-        consent: true
+        consent: userData.termsAccepted ?? false
     });
     return response.data;
   },
