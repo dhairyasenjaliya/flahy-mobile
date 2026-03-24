@@ -1,6 +1,6 @@
 import { ArrowLeft, Calendar, ChevronDown, ChevronRight, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import WebView from 'react-native-webview';
 import { CustomInput } from '../components/CustomInput';
 import { ScreenWrapper } from '../components/ScreenWrapper';
@@ -130,6 +130,32 @@ export const SettingsScreen = () => {
     const handleLogout = () => {
         logout();
         // Navigation reset is handled by RootNavigator now
+    };
+
+    const handleDeleteAccount = () => {
+        Alert.alert(
+            'Delete Account',
+            'Deleting your account will permanently remove your profile and associated data, including your health records and reports from the app. Some data may be retained where required by applicable law.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        setIsLoading(true);
+                        try {
+                            await userService.deleteAccount();
+                            logout();
+                        } catch (error: any) {
+                            console.error('Delete account failed', error);
+                            showAlert('Error', error.response?.data?.message || 'Failed to delete account', 'error');
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    },
+                },
+            ],
+        );
     };
 
     return (
@@ -315,9 +341,17 @@ export const SettingsScreen = () => {
 
                         <TouchableOpacity
                             onPress={handleLogout}
-                            style={{ marginTop: 16, backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2', marginBottom: 80 }}
+                            style={{ marginTop: 16, backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#FEE2E2' }}
                         >
                             <Text style={{ color: '#EF4444', fontWeight: 'bold', fontSize: 16 }}>Log Out</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={handleDeleteAccount}
+                            disabled={isLoading}
+                            style={{ marginTop: 12, backgroundColor: '#FEF2F2', padding: 16, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#FCA5A5', marginBottom: 80, opacity: isLoading ? 0.7 : 1 }}
+                        >
+                            <Text style={{ color: '#DC2626', fontWeight: 'bold', fontSize: 16 }}>Delete Account</Text>
                         </TouchableOpacity>
 
                     </ScrollView>

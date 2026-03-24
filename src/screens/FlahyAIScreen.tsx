@@ -300,7 +300,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     useEffect(() => {
         AsyncStorage.getItem(AI_CONSENT_KEY).then(val => {
-            setHasAIConsent(false);
+            setHasAIConsent(val === 'true');
         });
     }, []);
 
@@ -633,8 +633,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                             <Text style={{ fontSize: 22, fontWeight: '700', color: colors['text-primary'], textAlign: 'center', marginBottom: 8 }}>
                                 FlahyAI Data Consent
                             </Text>
-                            <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 20 }}>
-                                Before using FlahyAI, please review how your data is used.
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 22 }}>
+                                FlahyAI uses third-party AI services (such as OpenAI) to process your health data and queries in order to generate insights and recommendations. This may include sharing your report data and messages with our AI service providers.
                             </Text>
                         </View>
 
