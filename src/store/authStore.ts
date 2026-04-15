@@ -21,7 +21,10 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       setToken: (token) => set({ token, isAuthenticated: !!token }),
       setUser: (user) => set({ user }),
-      logout: () => set({ token: null, user: null, isAuthenticated: false }),
+      logout: () => {
+        AsyncStorage.removeItem('flahy_ai_consent_accepted');
+        set({ token: null, user: null, isAuthenticated: false });
+      },
     }),
     {
       name: 'auth-storage',

@@ -31,10 +31,8 @@ export const DashboardScreen = () => {
     const [isUploading, setIsUploading] = useState(false);
     const [isSupplementModalVisible, setIsSupplementModalVisible] = useState(false);
     const [hasReport, setHasReport] = useState(false);
-    const user = useAuthStore((state) => {
-        console.log("🚀 ~ DashboardScreen ~ user:", user)
-        return state.user;
-    });
+    const user = useAuthStore((state) => state.user);
+    const setUser = useAuthStore((state) => state.setUser);
 
     // Custom Alert State
     const [alertConfig, setAlertConfig] = useState<{
@@ -86,7 +84,20 @@ export const DashboardScreen = () => {
         }
     };
 
+    const fetchProfile = async () => {
+        try {
+            const data = await userService.getProfile();
+            const userData = data.user || data;
+            if (userData) {
+                setUser({ ...user, ...userData });
+            }
+        } catch (error) {
+            console.error("Failed to fetch profile", error);
+        }
+    };
+
     useEffect(() => {
+        fetchProfile();
         fetchFiles();
         checkReport();
     }, []);
@@ -103,11 +114,6 @@ export const DashboardScreen = () => {
             setHasReport(false);
         }
     };
-
-    useEffect(() => {
-        fetchFiles();
-        checkReport();
-    }, []);
 
     const handleDownloadReport = () => {
         navigation.navigate('Reports');
@@ -346,7 +352,7 @@ export const DashboardScreen = () => {
             <ScrollView
                 className="flex-1"
                 contentContainerStyle={{ paddingBottom: 100 }}
-                refreshControl={<RefreshControl refreshing={isLoading} onRefresh={fetchFiles} />}
+                refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { fetchProfile(); fetchFiles(); checkReport(); }} />}
                 showsVerticalScrollIndicator={false}
             >
                 <View className="px-6 pt-4 pb-2"> 
@@ -361,7 +367,7 @@ export const DashboardScreen = () => {
                             />
                             <View>
                                 <Text className="text-text-primary font-bold text-lg">Hi {user?.first_name || 'User'}</Text>
-                                <Text className="text-text-primary font-bold text-xl font-modern">Welcome to Dashboard</Text>
+                                {/* <Text className="text-text-primary font-bold text-xl font-modern">Welcome to Dashboard</Text> */}
                             </View>
                         </View>
                         <TouchableOpacity 
@@ -433,25 +439,29 @@ export const DashboardScreen = () => {
                         </TouchableOpacity>
                     )}
 
-                    {/* Products Button */}
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('Supplements')}
-                        className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
-                    >
-                        <Package size={20} color="white" />
-                         <Text className="text-white font-semibold text-base ml-2">Products</Text>
-                    </TouchableOpacity>
+                    {/* Products Button — only show when user has a report */}
+                    {hasReport && (
+                        <TouchableOpacity
+                            onPress={() => navigation.navigate('Supplements')}
+                            className="bg-teal w-full h-14 rounded-xl flex-row items-center justify-center mb-6 shadow-sm active:opacity-90"
+                        >
+                            <Package size={20} color="white" />
+                            <Text className="text-white font-semibold text-base ml-2">Products</Text>
+                        </TouchableOpacity>
+                    )}
 
                     {/* Action Grid */}
                     <View style={{ flexDirection: 'row', gap: GRID_GAP, marginBottom: 32 }}>
-                        {/* FlahyAI */}
-                        <TouchableOpacity
-                            onPress={handleFlahyAI}
-                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <Sparkles size={28} color="white" />
-                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>FlahyAI</Text>
-                        </TouchableOpacity>
+                        {/* FlahyAI — only show when user has a report */}
+                        {hasReport && (
+                            <TouchableOpacity
+                                onPress={handleFlahyAI}
+                                style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <Sparkles size={28} color="white" />
+                                <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>FlahyAI</Text>
+                            </TouchableOpacity>
+                        )}
 
                         {/* Upload */}
                         <TouchableOpacity
@@ -472,14 +482,16 @@ export const DashboardScreen = () => {
                             <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Camera</Text>
                         </TouchableOpacity>
 
-                        {/* Supplements (Intake Modal) */}
-                        <TouchableOpacity
-                            onPress={() => setIsSupplementModalVisible(true)}
-                            style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <ShoppingBag size={28} color="white" />
-                            <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Supplements</Text>
-                        </TouchableOpacity>
+                        {/* Supplements (Intake Modal) — only show when user has a report */}
+                        {hasReport && (
+                            <TouchableOpacity
+                                onPress={() => setIsSupplementModalVisible(true)}
+                                style={{ width: BTN_SIZE, height: BTN_SIZE, backgroundColor: colors.teal, borderRadius: 12, alignItems: 'center', justifyContent: 'center' }}
+                            >
+                                <ShoppingBag size={28} color="white" />
+                                <Text style={{ color: 'white', fontWeight: '500', fontSize: 12, marginTop: 6 }} numberOfLines={1} adjustsFontSizeToFit>Supplements</Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     {/* My Data Section Header in White Card Area */}

@@ -144,7 +144,7 @@ export const SettingsScreen = () => {
                     onPress: async () => {
                         setIsLoading(true);
                         try {
-                            await userService.deleteAccount();
+                            await userService.deleteAccount(user?.id);
                             logout();
                         } catch (error: any) {
                             console.error('Delete account failed', error);
@@ -324,7 +324,7 @@ export const SettingsScreen = () => {
                         {/* Legal Links */}
                         <View style={{ marginTop: 24, gap: 12 }}>
                             <TouchableOpacity
-                                onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy'); }}
+                                onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy-mobile'); }}
                                 style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F9FAFB', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#F3F4F6' }}
                             >
                                 <Text style={{ fontSize: 15, fontWeight: '500', color: colors['text-primary'] }}>Privacy Policy</Text>

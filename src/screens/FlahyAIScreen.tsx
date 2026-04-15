@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Bot, FileText, Send, Shield, Sparkles } from 'lucide-react-native';
+import { FileText, Send, Shield, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Image,
     Keyboard,
     KeyboardAvoidingView,
     Linking,
@@ -634,7 +635,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                                 FlahyAI Data Consent
                             </Text>
                             <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 22 }}>
-                                FlahyAI uses third-party AI services (such as OpenAI) to process your health data and queries in order to generate insights and recommendations. This may include sharing your report data and messages with our AI service providers.
+                                FlahyAI uses OpenAI, a third-party AI service provider, to process your health data and queries in order to generate insights and recommendations. Your report data and messages will be sent to OpenAI when you use FlahyAI.
                             </Text>
                         </View>
 
@@ -659,8 +660,14 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                             <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
                                 Who receives your data
                             </Text>
-                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
-                                Your data is processed by OpenAI (or its affiliated entities), a trusted third-party AI service provider, solely to generate responses and provide health-related insights within FlahyAI.
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                Your data is sent to:
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-primary'], fontWeight: '600', lineHeight: 22 }}>
+                                {'\u2022'} OpenAI, Inc. (https://openai.com)
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginTop: 6 }}>
+                                OpenAI provides the large language model (LLM) that powers FlahyAI. Your data is used solely to generate responses and health-related insights within FlahyAI.
                             </Text>
                         </View>
 
@@ -692,7 +699,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
                         <Text style={{ fontSize: 13, color: colors['text-secondary'], textAlign: 'center', marginBottom: 20, lineHeight: 18 }}>
                             You can choose not to use FlahyAI at any time. For more details, read our{' '}
-                            <Text style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://flahyhealth.com/privacy-policy')}>
+                            <Text style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://flahyhealth.com/privacy-policy-mobile')}>
                                 Privacy Policy
                             </Text>.
                         </Text>
@@ -725,7 +732,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             {isInitializing ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
                     <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors['green-light'], alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                        <Bot size={32} color={colors.primary} />
+                        <Image source={require('../assets/flahy_icon.png')} style={{ width: 40, height: 40 ,  }} resizeMode="contain" />
                     </View>
                     <Text style={{ fontSize: 24, fontWeight: '700', color: colors['text-primary'], marginBottom: 6 }}>FlahyAI</Text>
                     <Text style={{ fontSize: 14, color: colors['text-secondary'], marginBottom: 24 }}>Your Personal Health AI</Text>
@@ -781,8 +788,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                                 }`}
                             >
                                 {item.role === 'assistant' && (
-                                    <View className="w-8 h-8 rounded-full bg-white shadow-sm items-center justify-center mr-2 border border-gray-100">
-                                        <Bot size={16} color={colors.primary} />
+                                    <View className="w-8 h-8 rounded-full bg-white shadow-sm items-center justify-center mr-2 border border-gray-100 ml-1">
+                                        <Image source={require('../assets/flahy_icon.png')} style={{ width: 20, height: 20 }} resizeMode="contain" />
                                     </View>
                                 )}
                                 <View

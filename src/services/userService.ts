@@ -56,8 +56,8 @@ export const userService = {
     return response.data;
   },
 
-  deleteAccount: async () => {
-    const response = await api.delete('/api/user/delete-account');
+  deleteAccount: async (userId: string) => {
+    const response = await api.delete(`/api/user/${userId}`);
     return response.data;
   }
 };

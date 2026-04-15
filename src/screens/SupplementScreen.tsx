@@ -1,8 +1,10 @@
 import { useNavigation } from '@react-navigation/native';
+import { LogOut } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Linking, Text, TouchableOpacity, View } from 'react-native';
 import { ScreenWrapper } from '../components/ScreenWrapper';
 import { Product, productService } from '../services/productService';
+import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 
 // Local mapping for product images
@@ -17,6 +19,7 @@ const DEFAULT_IMAGE = require('../assets/products/flahylife.png');
 
 export const SupplementScreen = () => {
     const navigation = useNavigation();
+    const { logout } = useAuthStore();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -74,34 +77,33 @@ export const SupplementScreen = () => {
         return (
             <View className="bg-white rounded-[30px] mb-8 overflow-hidden shadow-sm border border-gray-100 mx-4 elevation-3">
                 {/* Image Container */}
-                <View className="h-64 bg-gray-50 relative items-center justify-center p-4">
-                    <Image 
-                        source={IMAGE_MAP[item.slug.toLowerCase()] || DEFAULT_IMAGE} 
-                        className="w-full h-full rounded-2xl"
-                        resizeMode="stretch"
+                <View className="h-64 bg-gray-50 items-center justify-center p-4">
+                    <Image
+                        source={IMAGE_MAP[item.slug.toLowerCase()] || DEFAULT_IMAGE}
+                        style={{ width: '100%', height: '100%' }}
+                        resizeMode="contain"
                     />
                 </View>
-                
+
                 <View className="p-5 pt-4">
                     <Text className="text-text-primary font-bold text-xl mb-2">{item.name}</Text>
-                    
-                    {/* <Text className="text-text-secondary text-sm leading-5 mb-4 text-[#666666]">
-                        {item.description || "No description available."}
-                        <Text className="text-[#4FB5B0] font-medium underline"> Read more</Text>
-                    </Text> */}
+
+                    {item.description ? (
+                        <Text className="text-sm leading-5 mb-4 text-[#666666]" numberOfLines={3}>
+                            {item.description}
+                        </Text>
+                    ) : null}
 
                     <Text className="text-text-primary font-bold text-xl mb-6">
-                        {item.product_amount 
-                            ? `₹${(parseFloat(item.product_amount) / 100).toLocaleString()}` 
+                        {item.product_amount
+                            ? `₹${(parseFloat(item.product_amount) / 100).toLocaleString()}`
                             : (item.amount ? `₹${(item.amount / 100).toLocaleString()}` : '₹ --')
                         }
-                         {/* <Text className="font-normal text-xs text-text-secondary"> (incl. of taxes)</Text> */}
                     </Text>
-                    
-                    <TouchableOpacity 
+
+                    <TouchableOpacity
                         className="bg-[#4FB5B0] py-4 rounded-xl items-center shadow-sm active:opacity-90"
                         onPress={() => {
-                            // Link to product page
                             const productUrl = `https://flahyhealth.com/${item.slug}`;
                             Linking.openURL(productUrl).catch((err: any) => console.error("Couldn't load page", err));
                         }}
@@ -126,7 +128,15 @@ export const SupplementScreen = () => {
                  
                 {/* Custom Header */}
                 <View className="px-6 pt-2 pb-6 items-center relative">
-                    
+
+                    {/* Logout Button */}
+                    <TouchableOpacity
+                        onPress={logout}
+                        className="absolute right-6 top-4 z-10 p-2"
+                    >
+                        <LogOut size={22} color="#EF4444" />
+                    </TouchableOpacity>
+
                     {/* Logo Area */}
                     <View className="flex-row items-center mb-6 mt-4">
                         <Image 
