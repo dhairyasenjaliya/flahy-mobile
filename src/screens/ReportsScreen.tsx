@@ -128,7 +128,7 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
                 name: file.name,
                 uri: file.uri, // Thumbnail (if available, likely null for reports)
                 originalUri: file.originalUri,
-                type: 'pdf' // Defaulting to PDF for reports
+                type: file.type, // Actual extension: pdf or html
             }
         });
     };
@@ -165,18 +165,19 @@ export const ReportsScreen = ({ navigation }: ReportsScreenProps) => {
                         </Text> */}
                         
                         <View className="flex-row gap-4">
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 onPress={() => handleView(item)}
-                                className="flex-1 bg-gray-100 py-3 rounded-xl items-center justify-center active:opacity-90 mr-2"
+                                className="flex-1 bg-teal py-3 rounded-xl items-center justify-center shadow-sm active:opacity-90"
                             >
-                                <Text className="text-text-primary font-medium text-sm">View</Text>
+                                <Text className="text-white font-medium text-sm">View</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity 
+                            {/* Download disabled: reports are view-only inside the app */}
+                            {/* <TouchableOpacity
                                 onPress={() => handleDownload(item)}
                                 className="flex-1 bg-teal py-3 rounded-xl items-center justify-center shadow-sm active:opacity-90"
                             >
                                 <Text className="text-white font-medium text-sm">Download</Text>
-                            </TouchableOpacity>
+                            </TouchableOpacity> */}
                         </View>
                     </View>
                  

@@ -54,6 +54,11 @@ export const userService = {
   requestSupplement: async (data: { name: string; dob: string; phone: string }) => {
     const response = await api.post('/supplement-request', data);
     return response.data;
+  },
+
+  deleteAccount: async (userId: string) => {
+    const response = await api.delete(`/api/user/${userId}`);
+    return response.data;
   }
 };
 

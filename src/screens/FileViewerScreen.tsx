@@ -17,6 +17,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import FastImage from 'react-native-fast-image';
 import Pdf from 'react-native-pdf';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import WebView from 'react-native-webview';
 import { API_BASE_URL } from '../config';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
@@ -47,8 +48,12 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
 
     const fileExt = file.name?.split('.').pop()?.toLowerCase() || '';
     const isPdf = file.type?.toLowerCase().includes('pdf') || fileExt === 'pdf';
+    const isHtml =
+        !isPdf &&
+        (file.type?.toLowerCase().includes('html') || ['html', 'htm'].includes(fileExt));
     const isImage =
         !isPdf &&
+        !isHtml &&
         (file.type?.toLowerCase().includes('image') ||
             ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt));
 
@@ -63,6 +68,7 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
     const [error, setError] = useState<string | null>(null);
     const [pdfPageCount, setPdfPageCount] = useState(0);
     const [pdfCurrentPage, setPdfCurrentPage] = useState(1);
+    const [htmlContent, setHtmlContent] = useState<string | null>(null);
 
     // Download file to cache (for PDF viewing or later saving)
     const downloadToCache = useCallback(async (): Promise<string | null> => {
@@ -101,10 +107,12 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
         }
     }, [fullUri, token, file.name, fileExt]);
 
-    // On mount: download PDFs to cache for viewing
+    // On mount: download PDFs/HTML to cache for viewing
     useEffect(() => {
         if (isPdf) {
             loadPdf();
+        } else if (isHtml) {
+            loadHtml();
         }
     }, []);
 
@@ -118,6 +126,29 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
             }
         } catch (err: any) {
             setError(err.message || 'Failed to load PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const loadHtml = async () => {
+        setIsDownloading(true);
+        setError(null);
+        try {
+            const res = await ReactNativeBlobUtil.config({ timeout: 30000 }).fetch(
+                'GET',
+                fullUri,
+                { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            );
+            const status = res.info().status;
+            if (status >= 200 && status < 300) {
+                setHtmlContent(res.text());
+            } else {
+                throw new Error(`Server returned status ${status}`);
+            }
+        } catch (err: any) {
+            console.error('[FileViewer] HTML load error:', err);
+            setError(err.message || 'Failed to load HTML');
         } finally {
             setIsDownloading(false);
         }
@@ -281,6 +312,43 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
             );
         }
 
+        // ---- HTML: render ----
+        if (isHtml) {
+            if (isDownloading) {
+                return (
+                    <View style={s.centered}>
+                        <ActivityIndicator size="large" color={colors.primary} />
+                        <Text style={s.loadingText}>Loading report...</Text>
+                    </View>
+                );
+            }
+            if (error || !htmlContent) {
+                return (
+                    <View style={s.centered}>
+                        <View style={s.errorIcon}>
+                            <FileText size={40} color={colors['text-secondary']} />
+                        </View>
+                        <Text style={s.errorTitle}>Unable to load file</Text>
+                        <Text style={s.errorSub}>{error || 'Something went wrong.'}</Text>
+                        <TouchableOpacity style={s.retryBtn} onPress={loadHtml}>
+                            <Text style={s.retryText}>Retry</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            }
+            return (
+                <View style={{ flex: 1, width, backgroundColor: 'white' }}>
+                    <WebView
+                        originWhitelist={['*']}
+                        source={{ html: htmlContent, baseUrl: fullUri }}
+                        style={{ flex: 1, backgroundColor: 'white' }}
+                        javaScriptEnabled
+                        domStorageEnabled
+                    />
+                </View>
+            );
+        }
+
         // ---- PDF: loading state ----
         if (isDownloading) {
             return (
@@ -375,7 +443,8 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                 </Text>
 
                 <View style={s.headerActions}>
-                    <TouchableOpacity
+                    {/* Download disabled: reports are view-only inside the app */}
+                    {/* <TouchableOpacity
                         onPress={handleSaveFile}
                         disabled={isSaving}
                         style={[s.headerBtn, { backgroundColor: colors.teal }]}>
@@ -384,9 +453,6 @@ export const FileViewerScreen = ({ route, navigation }: any) => {
                         ) : (
                             <Download size={18} color="white" />
                         )}
-                    </TouchableOpacity>
-                    {/* <TouchableOpacity onPress={handleShare} style={s.headerBtn}>
-                        <Share2 size={18} color="white" />
                     </TouchableOpacity> */}
                 </View>
             </View>

@@ -151,9 +151,8 @@ export const LoginScreen = () => {
                 const response = await authService.verifyOtp(contact, otpValue, method === 'phone' ? 2 : 1, method === 'phone' ? '+91' : '');
                 
                 if (response.token) {
+                    setUser(response.user);
                     setToken(response.token);
-                    setUser(response.data);
-                    navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
                 } else {
                      showAlert("Error", "Invalid response", 'error');
                 }
@@ -175,10 +174,10 @@ export const LoginScreen = () => {
                 email: data.email.trim().toLowerCase(),
                 contact: data.phone.trim(),
                 country_code: data.countryCode,
-                date_of_birth: data.dob,
-                gender: data.gender.toLowerCase(), // Ensure lowercase: "male", "female", "other"
                 user_type: "user",
-                consent: data.termsAccepted
+                consent: data.termsAccepted,
+                ...(data.dob ? { date_of_birth: data.dob } : {}),
+                ...(data.gender ? { gender: data.gender.toLowerCase() } : {}),
             };
             
             // Validate Required Fields
@@ -201,9 +200,8 @@ export const LoginScreen = () => {
             if (response?.status === 200 || response?.status === 201 || response?.success || response?.token) {
                 // If API returns a token, log user in directly and go to Dashboard
                 if (response?.token) {
+                    setUser(response.user);
                     setToken(response.token);
-                    setUser(response.data || response.user);
-                    navigation.reset({ index: 0, routes: [{ name: 'Dashboard' }] });
                 } else {
                     // No token returned — ask user to log in
                     showAlert("Success", "Account created! Please log in.", 'success');
@@ -219,16 +217,34 @@ export const LoginScreen = () => {
             const serverMessage = error.response?.data?.message;
             const validationErrors = error.response?.data?.errors; 
             
+            const fieldLabels: Record<string, string> = {
+                first_name: 'First Name',
+                middle_name: 'Middle Name',
+                last_name: 'Last Name',
+                email: 'Email',
+                contact: 'Phone Number',
+                country_code: 'Country Code',
+                date_of_birth: 'Date of Birth',
+                gender: 'Gender',
+                consent: 'Terms & Conditions',
+                user_type: 'User Type',
+            };
+
+            const formatFieldMessage = (msg: string) => {
+                return Object.entries(fieldLabels).reduce(
+                    (result, [key, label]) => result.replace(new RegExp(key, 'g'), label),
+                    msg
+                );
+            };
+
             let displayMessage = "An error occurred during signup.";
 
             if (Array.isArray(validationErrors)) {
-                // Handle array of objects: [{ message: "...", ... }]
-                displayMessage = validationErrors.map((e: any) => e.message).filter(Boolean).join('\n');
+                displayMessage = validationErrors.map((e: any) => formatFieldMessage(e.message)).filter(Boolean).join('\n');
             } else if (validationErrors && typeof validationErrors === 'object') {
-                 // Handle object: { field: ["Error"] }
-                 displayMessage = Object.values(validationErrors).flat().join('\n');
+                 displayMessage = Object.values(validationErrors).flat().map((msg: any) => formatFieldMessage(String(msg))).join('\n');
             } else if (serverMessage) {
-                displayMessage = typeof serverMessage === 'string' ? serverMessage : JSON.stringify(serverMessage);
+                displayMessage = typeof serverMessage === 'string' ? formatFieldMessage(serverMessage) : JSON.stringify(serverMessage);
             } else {
                  displayMessage = error.message || "Unknown error";
             }

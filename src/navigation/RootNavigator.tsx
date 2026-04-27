@@ -17,7 +17,9 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator = () => {
   const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
   const hasHydrated = useAuthStore((state) => state._hasHydrated);
+  const hasOrder = user?.has_order === true;
 
   // Show a loading screen until the persisted auth state has been restored
   if (!hasHydrated) {
@@ -32,32 +34,37 @@ export const RootNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       {token ? (
         <>
-            <Stack.Screen name="Dashboard" component={DashboardScreen} />
+            {hasOrder ? (
+              <>
+                <Stack.Screen name="Dashboard" component={DashboardScreen} />
+                <Stack.Screen name="Supplements" component={SupplementScreen} options={{ animation: 'slide_from_right' }} />
+              </>
+            ) : (
+              <>
+                <Stack.Screen name="Supplements" component={SupplementScreen} />
+                <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ animation: 'slide_from_right' }} />
+              </>
+            )}
             <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen 
-                name="Upload" 
-                component={UploadScreen} 
-                options={{ presentation: 'modal' }} 
+            <Stack.Screen
+                name="Upload"
+                component={UploadScreen}
+                options={{ presentation: 'modal' }}
             />
-            <Stack.Screen 
-                name="FlahyAI" 
-                component={FlahyAIScreen} 
+            <Stack.Screen
+                name="FlahyAI"
+                component={FlahyAIScreen}
                 options={{ animation: 'slide_from_right' }}
             />
-            <Stack.Screen 
-                name="Reports" 
-                component={ReportsScreen} 
-                options={{ presentation: 'modal' }} 
+            <Stack.Screen
+                name="Reports"
+                component={ReportsScreen}
+                options={{ presentation: 'modal' }}
             />
             <Stack.Screen
                 name="FileViewer"
                 component={FileViewerScreen}
                 options={{ animation: 'fade' }}
-            />
-            <Stack.Screen
-                name="Supplements"
-                component={SupplementScreen}
-                options={{ animation: 'slide_from_right' }}
             />
             <Stack.Screen
                 name="SchedulePickup"

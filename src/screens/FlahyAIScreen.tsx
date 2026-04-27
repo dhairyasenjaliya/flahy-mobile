@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Bot, FileText, Send, Shield, Sparkles } from 'lucide-react-native';
+import { FileText, Send, Shield, Sparkles } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Image,
     Keyboard,
     KeyboardAvoidingView,
     Linking,
@@ -285,11 +286,97 @@ type ReportFile = {
     filename: string;
 };
 
-function getMimeType(fileName: string): string {
+const MAX_REPORT_TEXT_CHARS = 12000;
+
+function getMimeTypeFromName(fileName: string): string {
     const ext = fileName.split('.').pop()?.toLowerCase() || '';
     if (ext === 'pdf') return 'application/pdf';
     if (ext === 'png') return 'image/png';
-    return 'image/jpeg';
+    if (ext === 'html' || ext === 'htm') return 'text/html';
+    if (ext === 'json') return 'application/json';
+    if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+    return 'application/octet-stream';
+}
+
+function normalizeContentType(value: string): string {
+    return (value || '').toLowerCase().split(';')[0].trim();
+}
+
+function pickHeader(headers: Record<string, any> | undefined, key: string): string | undefined {
+    if (!headers) return undefined;
+    const lower = key.toLowerCase();
+    for (const h of Object.keys(headers)) {
+        if (h.toLowerCase() === lower) return String(headers[h]);
+    }
+    return undefined;
+}
+
+// Base64 -> UTF-8 string. Uses global.atob (available in RN 0.71+).
+function decodeBase64Utf8(b64: string): string {
+    try {
+        const atobFn = (globalThis as any).atob as ((s: string) => string) | undefined;
+        // atob decodes base64 to a binary string; each char code is a byte.
+        const binary = typeof atobFn === 'function' ? atobFn(b64) : '';
+        if (!binary) return '';
+        // Decode UTF-8 manually — TextDecoder is not reliably available in RN.
+        let out = '';
+        let i = 0;
+        while (i < binary.length) {
+            const c = binary.charCodeAt(i++);
+            if (c < 0x80) {
+                out += String.fromCharCode(c);
+            } else if (c < 0xe0 && i < binary.length) {
+                const c2 = binary.charCodeAt(i++);
+                out += String.fromCharCode(((c & 0x1f) << 6) | (c2 & 0x3f));
+            } else if (i + 1 < binary.length) {
+                const c2 = binary.charCodeAt(i++);
+                const c3 = binary.charCodeAt(i++);
+                out += String.fromCharCode(((c & 0x0f) << 12) | ((c2 & 0x3f) << 6) | (c3 & 0x3f));
+            }
+        }
+        return out;
+    } catch {
+        return '';
+    }
+}
+
+function htmlToPlainText(html: string): string {
+    return String(html || '')
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_REPORT_TEXT_CHARS);
+}
+
+function jsonToReportText(jsonText: string): string {
+    try {
+        const parsed = JSON.parse(jsonText);
+        return JSON.stringify(parsed, null, 2).slice(0, MAX_REPORT_TEXT_CHARS);
+    } catch {
+        return String(jsonText || '').slice(0, MAX_REPORT_TEXT_CHARS);
+    }
+}
+
+function looksLikeHtml(sample: string): boolean {
+    const normalized = sample.trimStart().toLowerCase();
+    return (
+        normalized.startsWith('<!doctype html') ||
+        normalized.startsWith('<html') ||
+        normalized.includes('<html') ||
+        normalized.includes('<body') ||
+        normalized.includes('<head')
+    );
+}
+
+function looksLikeJson(sample: string): boolean {
+    const trimmed = sample.trimStart();
+    return trimmed.startsWith('{') || trimmed.startsWith('[');
 }
 
 const AI_CONSENT_KEY = 'flahy_ai_consent_accepted';
@@ -300,7 +387,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     useEffect(() => {
         AsyncStorage.getItem(AI_CONSENT_KEY).then(val => {
-            setHasAIConsent(false);
+            setHasAIConsent(val === 'true');
         });
     }, []);
 
@@ -347,6 +434,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
     // Report file data — attached to the first user message (same as web)
     const reportFileRef = useRef<ReportFile | null>(null);
+    // Report text (used for HTML/JSON reports) — injected as REPORT_TEXT in system prompt.
+    const reportTextRef = useRef<string | null>(null);
 
     const scrollToBottom = (animated = true) => {
         const offset = contentHeightRef.current - layoutHeightRef.current;
@@ -387,6 +476,34 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
         loadLatestReport();
     }, []);
 
+    const convertHtmlToPdfBase64 = async (html: string): Promise<string | null> => {
+        try {
+            const response = await fetch(`${WEB_APP_URL}/api/html-to-pdf`, {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({ html }),
+            });
+            if (!response.ok) return null;
+            // Read as base64 via blob util style path. Fallback to text hex decoding isn't safe for binary,
+            // so use blob() + FileReader-equivalent via arrayBuffer -> base64.
+            const arrayBuffer = await response.arrayBuffer();
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            const chunkSize = 0x8000;
+            for (let i = 0; i < bytes.length; i += chunkSize) {
+                binary += String.fromCharCode.apply(
+                    null,
+                    Array.from(bytes.subarray(i, i + chunkSize)) as any
+                );
+            }
+            const btoaFn = (globalThis as any).btoa as ((s: string) => string) | undefined;
+            return typeof btoaFn === 'function' ? btoaFn(binary) : null;
+        } catch (err) {
+            console.error('html-to-pdf conversion failed:', err);
+            return null;
+        }
+    };
+
     const loadLatestReport = async () => {
         setIsInitializing(true);
         try {
@@ -406,8 +523,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             }
 
             const latestReport = reports[0];
-            const fileName = latestReport.file_name;
-            const mediaType = getMimeType(fileName);
+            const fileName: string = latestReport.file_name || `report-${latestReport.id}`;
 
             // 2. Download the actual report file as base64
             const downloadUrl = `${API_BASE_URL}${patientApiRoutes.downloadReport}/${latestReport.id}`;
@@ -415,9 +531,99 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                 Authorization: `Bearer ${token}`,
             });
 
-            const base64 = downloadResponse.base64();
+            const respHeaders = (downloadResponse as any).respInfo?.headers;
+            const headerCT = normalizeContentType(
+                pickHeader(respHeaders, 'content-type') || pickHeader(respHeaders, 'Content-Type') || ''
+            );
+            const nameCT = normalizeContentType(getMimeTypeFromName(fileName));
+            let effectiveCT = headerCT || nameCT;
 
-            reportFileRef.current = { base64, mediaType, filename: fileName };
+            // Reset any previous report context
+            reportFileRef.current = null;
+            reportTextRef.current = null;
+
+            // Read as text if the content-type or filename hints at text; sniff a 2KB
+            // sample before committing so a misreported content-type can't strand the AI
+            // with a useless binary payload.
+            const maybeText =
+                effectiveCT === 'text/html' ||
+                effectiveCT === 'application/json' ||
+                effectiveCT.startsWith('text/') ||
+                !effectiveCT ||
+                effectiveCT === 'application/octet-stream';
+
+            let textContent: string | null = null;
+            if (maybeText) {
+                try {
+                    const raw: string = (downloadResponse as any).text?.() ?? '';
+                    if (raw) textContent = raw;
+                } catch (err) {
+                    console.warn('downloadResponse.text() failed, falling back to base64 decode:', err);
+                }
+                if (!textContent) {
+                    const b64 = downloadResponse.base64();
+                    const decoded = decodeBase64Utf8(b64);
+                    if (decoded) textContent = decoded;
+                }
+            }
+
+            // If sniff identifies HTML/JSON, override a lying/missing content-type.
+            if (textContent) {
+                const sample = textContent.slice(0, 2048);
+                if (effectiveCT !== 'text/html' && looksLikeHtml(sample)) effectiveCT = 'text/html';
+                else if (effectiveCT !== 'application/json' && looksLikeJson(sample)) effectiveCT = 'application/json';
+            }
+
+            if (effectiveCT === 'text/html' && textContent) {
+                // Always expose the report as REPORT_TEXT so the AI has it even if PDF
+                // conversion fails or the chat route can't read a PDF attachment.
+                const plain = htmlToPlainText(textContent);
+                if (plain) reportTextRef.current = plain;
+
+                // Best-effort: also convert to PDF so vision models can see layout.
+                // If this fails (e.g. html-to-pdf endpoint is unavailable) we still have REPORT_TEXT.
+                const pdfBase64 = await convertHtmlToPdfBase64(textContent);
+                if (pdfBase64) {
+                    reportFileRef.current = {
+                        base64: pdfBase64,
+                        mediaType: 'application/pdf',
+                        filename: fileName.replace(/\.(html?|json)$/i, '') + '.pdf',
+                    };
+                }
+            } else if (effectiveCT === 'application/json' && textContent) {
+                const formatted = jsonToReportText(textContent);
+                if (formatted) reportTextRef.current = formatted;
+            } else if (effectiveCT === 'application/pdf' || effectiveCT.startsWith('image/')) {
+                reportFileRef.current = {
+                    base64: downloadResponse.base64(),
+                    mediaType: effectiveCT,
+                    filename: fileName,
+                };
+            } else if (textContent) {
+                // Plain text or unrecognized text blob — still usable as REPORT_TEXT.
+                const trimmed = textContent.trim().slice(0, MAX_REPORT_TEXT_CHARS);
+                if (trimmed) reportTextRef.current = trimmed;
+            } else {
+                // Unknown binary — fall back to filename-based MIME as a best guess.
+                reportFileRef.current = {
+                    base64: downloadResponse.base64(),
+                    mediaType: nameCT,
+                    filename: fileName,
+                };
+            }
+
+            console.log(
+                '[FlahyAI] report loaded:',
+                {
+                    fileName,
+                    headerCT,
+                    effectiveCT,
+                    hasText: !!reportTextRef.current,
+                    textLen: reportTextRef.current?.length ?? 0,
+                    hasFile: !!reportFileRef.current,
+                    fileMedia: reportFileRef.current?.mediaType,
+                }
+            );
 
             // 3. Show generic greeting (report loaded silently in background)
             setGreetingMessage({
@@ -437,8 +643,9 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
         const msgText = text.trim();
         if (!msgText || isLoading) return;
 
+        const userMsgId = Date.now().toString();
         const userMsg = {
-            id: Date.now().toString(),
+            id: userMsgId,
             role: 'user' as const,
             content: msgText,
         };
@@ -491,6 +698,11 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                 return { id: m.id, role: m.role, parts };
             });
 
+            const reportText = reportTextRef.current;
+            const effectiveSystem = reportText
+                ? `${SYSTEM_PROMPT}\n\nREPORT_TEXT:\n${reportText}`
+                : SYSTEM_PROMPT;
+
             const response = await fetch(`${WEB_APP_URL}/api/chat`, {
                 method: 'POST',
                 headers: {
@@ -499,7 +711,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                 },
                 body: JSON.stringify({
                     messages: apiMessages,
-                    system: SYSTEM_PROMPT,
+                    system: effectiveSystem,
                     tools: {},
                 }),
                 // @ts-ignore — React Native specific option for text streaming
@@ -585,11 +797,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                 return;
             }
 
-            const latestReport = reports[0];
-            const fileName = latestReport.file_name;
-
             setIsLoading(false);
-            sendMessage(`Analyze my latest report: ${fileName}`);
+            sendMessage('Analyze my latest report');
         } catch (error: any) {
             console.error('Fetch Report Error:', error);
             setGreetingMessage({
@@ -633,8 +842,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                             <Text style={{ fontSize: 22, fontWeight: '700', color: colors['text-primary'], textAlign: 'center', marginBottom: 8 }}>
                                 FlahyAI Data Consent
                             </Text>
-                            <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 20 }}>
-                                Before using FlahyAI, please review how your data is used.
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], textAlign: 'center', lineHeight: 22 }}>
+                                FlahyAI uses OpenAI, a third-party AI service provider, to process your health data and queries in order to generate insights and recommendations. Your report data and messages will be sent to OpenAI when you use FlahyAI.
                             </Text>
                         </View>
 
@@ -659,8 +868,14 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                             <Text style={{ fontSize: 16, fontWeight: '600', color: colors['text-primary'], marginBottom: 12 }}>
                                 Who receives your data
                             </Text>
-                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22 }}>
-                                Your data is processed by OpenAI (or its affiliated entities), a trusted third-party AI service provider, solely to generate responses and provide health-related insights within FlahyAI.
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginBottom: 6 }}>
+                                Your data is sent to:
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-primary'], fontWeight: '600', lineHeight: 22 }}>
+                                {'\u2022'} OpenAI, Inc. (https://openai.com)
+                            </Text>
+                            <Text style={{ fontSize: 14, color: colors['text-secondary'], lineHeight: 22, marginTop: 6 }}>
+                                OpenAI provides the large language model (LLM) that powers FlahyAI. Your data is used solely to generate responses and health-related insights within FlahyAI.
                             </Text>
                         </View>
 
@@ -692,7 +907,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
 
                         <Text style={{ fontSize: 13, color: colors['text-secondary'], textAlign: 'center', marginBottom: 20, lineHeight: 18 }}>
                             You can choose not to use FlahyAI at any time. For more details, read our{' '}
-                            <Text style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://flahyhealth.com/privacy-policy')}>
+                            <Text style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={() => Linking.openURL('https://flahyhealth.com/privacy-policy-mobile')}>
                                 Privacy Policy
                             </Text>.
                         </Text>
@@ -725,7 +940,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
             {isInitializing ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingBottom: 60 }}>
                     <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors['green-light'], alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
-                        <Bot size={32} color={colors.primary} />
+                        <Image source={require('../assets/flahy_icon.png')} style={{ width: 40, height: 40 ,  }} resizeMode="contain" />
                     </View>
                     <Text style={{ fontSize: 24, fontWeight: '700', color: colors['text-primary'], marginBottom: 6 }}>FlahyAI</Text>
                     <Text style={{ fontSize: 14, color: colors['text-secondary'], marginBottom: 24 }}>Your Personal Health AI</Text>
@@ -781,8 +996,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                                 }`}
                             >
                                 {item.role === 'assistant' && (
-                                    <View className="w-8 h-8 rounded-full bg-white shadow-sm items-center justify-center mr-2 border border-gray-100">
-                                        <Bot size={16} color={colors.primary} />
+                                    <View className="w-8 h-8 rounded-full bg-white shadow-sm items-center justify-center mr-2 border border-gray-100 ml-1">
+                                        <Image source={require('../assets/flahy_icon.png')} style={{ width: 20, height: 20 }} resizeMode="contain" />
                                     </View>
                                 )}
                                 <View
@@ -808,9 +1023,11 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                                             )}
                                         </>
                                     ) : (
-                                        <Text className="text-base leading-6 text-white">
-                                            {item.content}
-                                        </Text>
+                                        item.content ? (
+                                            <Text className="text-base leading-6 text-white">
+                                                {item.content}
+                                            </Text>
+                                        ) : null
                                     )}
                                 </View>
                             </View>
@@ -823,9 +1040,8 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                 <View style={[inputStyles.wrapper, keyboardHeight > 0 && { paddingBottom: keyboardHeight }]}>
                     <View style={inputStyles.bar}>
                         <View style={inputStyles.iconCircle}>
-                            <Sparkles size={20} color={colors['text-secondary']} />
+                            <Sparkles size={20} color={colors.primary} />
                         </View>
-
                         <View style={inputStyles.inputWrap}>
                             <TextInput
                                 value={inputText}
@@ -839,7 +1055,7 @@ export const FlahyAIScreen = ({ navigation }: Props) => {
                         </View>
                         <TouchableOpacity
                             onPress={() => sendMessage()}
-                            disabled={isLoading}
+                            disabled={isLoading || !inputText.trim()}
                             style={[
                                 inputStyles.sendBtn,
                                 isLoading || !inputText.trim()

@@ -150,8 +150,11 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                         onConfirm={(date: Date) => {
                             setOpen(false);
                             setDate(date);
-                            // Format: YYYY-MM-DD
-                            setDob(date.toISOString().split('T')[0]);
+                            // Format: YYYY-MM-DD using local time to avoid UTC timezone shift
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            setDob(`${year}-${month}-${day}`);
                         }}
                         onCancel={() => {
                             setOpen(false);
@@ -199,7 +202,7 @@ export const SignupForm: React.FC<SignupFormProps> = ({ onSubmit, onBack, isLoad
                             <Text className="text-primary font-semibold text-sm">Terms & Conditions</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy'); }}
+                            onPress={() => { setLegalModalTitle('Privacy Policy'); setLegalModalUrl('https://flahyhealth.com/privacy-policy-mobile'); }}
                             className="flex-1 bg-white border border-gray-300 rounded-xl py-3 items-center"
                         >
                             <Text className="text-primary font-semibold text-sm">Privacy Policy</Text>
