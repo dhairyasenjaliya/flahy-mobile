@@ -78,3 +78,5 @@ flahybase-ui-web
 
 # Claude Code
 .claude/settings.json
+
+web/
